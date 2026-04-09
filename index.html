@@ -7,1100 +7,1739 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#1a1a18;font-size:15px;line-height:1.5}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0efeb;color:#1c1c1a;font-size:15px;line-height:1.5;min-height:100vh}
 input,textarea,select,button{font-family:inherit;font-size:14px}
-input[type=text],input[type=number],input[type=date],input[type=email],input[type=password],textarea,select{width:100%;padding:8px 10px;border:1px solid #dddbd3;border-radius:7px;background:#fff;color:#1a1a18;outline:none;box-sizing:border-box}
-input:focus,textarea:focus,select:focus{border-color:#888780}
-textarea{resize:vertical;min-height:68px}
 button{cursor:pointer}
-.hidden{display:none!important}
+
+/* Header */
+.header{background:#1c1c1a;color:#fff;padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:12px}
+.header-logo{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;white-space:nowrap}
+.header-logo span{opacity:.6;font-weight:400}
+.header-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.user-badge{font-size:12px;padding:3px 10px;border-radius:20px;font-weight:600}
+.user-badge.staff{background:#2d4a20;color:#7dc954}
+.user-badge.marketing{background:#1a3352;color:#5ba3f5}
+.user-badge.admin{background:#3d1f5e;color:#b57fe8}
+.btn-signout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff;padding:5px 12px;border-radius:6px;font-size:12px}
+.btn-signout:hover{background:rgba(255,255,255,.18)}
+
+/* Nav */
+.nav{background:#fff;border-bottom:1px solid #e5e3dc;padding:0 16px;display:flex;align-items:center;gap:0;flex-wrap:wrap}
+.nav-btn{padding:10px 13px;font-size:13px;font-weight:500;color:#6b6966;background:none;border:none;border-bottom:2px solid transparent;white-space:nowrap;margin-bottom:-1px;transition:all .15s}
+.nav-btn:hover{color:#1c1c1a}
+.nav-btn.active{color:#1c1c1a;border-bottom-color:#1c1c1a;font-weight:600}
+.nav-btn.accent{color:#2563eb;font-weight:600}
+.nav-btn.accent:hover{color:#1d4ed8}
+
 /* Layout */
-header{background:#fff;border-bottom:1px solid #e5e3db;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:100}
-main{max-width:960px;margin:0 auto;padding:28px 20px}
+.page{max-width:1060px;margin:0 auto;padding:24px 16px}
+@media(max-width:600px){.page{padding:16px 12px}}
+
 /* Cards */
-.card{background:#fff;border:1px solid #e5e3db;border-radius:12px;padding:18px 20px;margin-bottom:12px}
-.card-title{font-size:11px;font-weight:600;letter-spacing:.06em;color:#888780;text-transform:uppercase;margin-bottom:14px}
-.field{margin-bottom:10px}
-.field label{display:block;font-size:13px;color:#5f5e5a;margin-bottom:4px}
-.tip{font-size:11px;color:#aaa9a2;margin-top:3px;font-style:italic}
+.card{background:#fff;border:1px solid #e5e3dc;border-radius:12px;padding:20px}
+.card-sm{padding:14px 16px}
+
+/* Grid */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:640px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+/* Fields */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:600;color:#3a3835;margin-bottom:5px}
+.req{color:#dc2626;margin-left:2px}
+.opt{font-size:11px;font-weight:400;color:#aaa9a2;margin-left:4px}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1.5px solid #d9d7d0;border-radius:8px;background:#fff;color:#1c1c1a;outline:none;transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.field textarea{resize:vertical;min-height:72px}
+.field .hint{font-size:11px;color:#9a9893;margin-top:3px}
+.field-error input,.field-error select,.field-error textarea{border-color:#dc2626}
+.field-error .err{display:block!important}
+.err{display:none;font-size:11px;color:#dc2626;margin-top:3px}
+
 /* Buttons */
-.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;border:1px solid #dddbd3;background:transparent;color:#1a1a18;cursor:pointer;transition:all .15s}
-.btn:hover{background:#f0ede6}
-.btn-primary{background:#f0ede6;border-color:#ccc9c0}
-.btn-submit{background:#1a1a18;color:#fff;border-color:transparent}
-.btn-submit:hover{opacity:.85;background:#1a1a18}
-.btn-success{background:#EAF3DE;border-color:#97C459;color:#3B6D11}
-.btn-danger{background:#FCEBEB;border-color:#f09595;color:#A32D2D}
-.btn-info{background:#E6F1FB;border-color:#85B7EB;color:#185FA5}
-.btn-sm{padding:5px 12px;font-size:12px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:14px;font-weight:500;border:1.5px solid #d9d7d0;background:#fff;color:#1c1c1a;cursor:pointer;transition:all .12s;white-space:nowrap}
+.btn:hover{background:#f5f4f0;border-color:#bbb9b2}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:#1c1c1a;border-color:#1c1c1a;color:#fff}
+.btn-primary:hover{background:#333;border-color:#333}
+.btn-blue{background:#2563eb;border-color:#2563eb;color:#fff}
+.btn-blue:hover{background:#1d4ed8;border-color:#1d4ed8}
+.btn-green{background:#16a34a;border-color:#16a34a;color:#fff}
+.btn-green:hover{background:#15803d}
+.btn-red{background:#fee2e2;border-color:#fca5a5;color:#dc2626}
+.btn-red:hover{background:#fecaca}
+.btn-yellow{background:#fef9c3;border-color:#fde047;color:#854d0e}
+.btn-yellow:hover{background:#fef08a}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:6px}
+.btn-xs{padding:4px 8px;font-size:11px;border-radius:5px}
+.btn-block{width:100%;justify-content:center}
+.btn-loading::after{content:'';display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-left:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* Badges */
-.badge{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;display:inline-block;white-space:nowrap}
-.badge-new{background:#E6F1FB;color:#185FA5}
-.badge-reviewing{background:#FAEEDA;color:#854F0B}
-.badge-active{background:#EAF3DE;color:#3B6D11}
-.badge-done{background:#f0ede6;color:#5f5e5a}
-.badge-high{background:#FCEBEB;color:#A32D2D}
-.badge-medium{background:#FAEEDA;color:#854F0B}
-.badge-standard{background:#EAF3DE;color:#3B6D11}
-.badge-staff{background:#EAF3DE;color:#3B6D11}
-.badge-marketing{background:#E6F1FB;color:#185FA5}
-.badge-admin{background:#FAEEDA;color:#854F0B}
-/* Stat cards */
-.stat{background:#f5f4f0;border-radius:10px;padding:14px 16px}
-.stat-label{font-size:11px;color:#888780;margin-bottom:4px}
-.stat-val{font-size:26px;font-weight:600}
-/* Goal grid */
-.goal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.goal-opt{border:1px solid #dddbd3;border-radius:8px;padding:10px 12px;cursor:pointer;transition:all .15s}
-.goal-opt:hover{border-color:#888780}
-.goal-opt.selected{border-color:#378ADD;background:#E6F1FB}
-.goal-name{font-size:13px;font-weight:600;color:#1a1a18;margin-bottom:2px}
-.goal-desc{font-size:11px;color:#888780}
-.goal-opt.selected .goal-name{color:#185FA5}
-.goal-opt.selected .goal-desc{color:#378ADD}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-new{background:#dbeafe;color:#1d4ed8}
+.badge-reviewing{background:#fef9c3;color:#854d0e}
+.badge-active{background:#dcfce7;color:#15803d}
+.badge-done{background:#f3f4f6;color:#4b5563}
+.badge-staff{background:#dcfce7;color:#15803d}
+.badge-marketing{background:#dbeafe;color:#1d4ed8}
+.badge-admin{background:#f3e8ff;color:#7c3aed}
+.badge-high{background:#fee2e2;color:#dc2626}
+.badge-medium{background:#fef9c3;color:#854d0e}
+.badge-low{background:#dcfce7;color:#15803d}
+
+/* Stats */
+.stat{background:#fff;border:1px solid #e5e3dc;border-radius:10px;padding:16px 18px}
+.stat-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#6b6966;margin-bottom:6px}
+.stat-value{font-size:28px;font-weight:700;line-height:1}
+
+/* Request cards */
+.req-card{background:#fff;border:1.5px solid #e5e3dc;border-radius:11px;padding:16px 18px;cursor:pointer;transition:all .12s;margin-bottom:10px}
+.req-card:hover{border-color:#2563eb;box-shadow:0 2px 12px rgba(37,99,235,.1);transform:translateY(-1px)}
+.req-card.clarification{border-left:4px solid #f59e0b}
+.req-card-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.req-card-meta{font-size:12px;color:#6b6966;display:flex;flex-wrap:wrap;gap:8px}
+.req-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid #f0efeb;flex-wrap:wrap;gap:6px}
+
+/* Priority bar */
+.pri-bar{height:4px;background:#e5e3dc;border-radius:2px;margin-top:8px;overflow:hidden}
+.pri-fill{height:100%;border-radius:2px}
+
+/* Alert */
+.alert{border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;line-height:1.5}
+.alert-warn{background:#fef9c3;border:1px solid #fde047;color:#854d0e}
+.alert-info{background:#dbeafe;border:1px solid #93c5fd;color:#1d4ed8}
+.alert-success{background:#dcfce7;border:1px solid #86efac;color:#15803d}
+.alert-error{background:#fee2e2;border:1px solid #fca5a5;color:#dc2626}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#6b6966;text-align:left;background:#f8f7f4;border-bottom:1px solid #e5e3dc;white-space:nowrap}
+.tbl td{padding:10px 12px;border-bottom:1px solid #f5f4f0;vertical-align:middle}
+.tbl tr:hover td{background:#fafaf8}
+.tbl tr:last-child td{border-bottom:none}
+
+/* Modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:flex-start;justify-content:center;padding:20px 12px;overflow-y:auto}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:14px;width:100%;max-width:580px;box-shadow:0 8px 40px rgba(0,0,0,.2);margin:auto}
+.modal-header{padding:18px 22px;border-bottom:1px solid #e5e3dc;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:700}
+.modal-close{background:none;border:none;font-size:20px;color:#6b6966;cursor:pointer;padding:2px 5px;line-height:1}
+.modal-close:hover{color:#1c1c1a}
+.modal-body{padding:20px 22px;max-height:70vh;overflow-y:auto}
+.modal-footer{padding:14px 22px;border-top:1px solid #e5e3dc;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.modal-footer-split{justify-content:space-between}
+
+/* Toast */
+#toasts{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:#1c1c1a;color:#fff;padding:10px 16px;border-radius:9px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.25);animation:fadeUp .2s ease;max-width:300px}
+.toast.ok{background:#15803d}
+.toast.err{background:#dc2626}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Steps */
+.steps{display:flex;align-items:center;margin-bottom:24px;gap:0;overflow-x:auto}
+.step{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.step-num{width:26px;height:26px;border-radius:50%;border:2px solid #d9d7d0;background:#fff;color:#9a9893;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.step-label{font-size:12px;color:#9a9893;white-space:nowrap}
+.step.active .step-num{background:#1c1c1a;border-color:#1c1c1a;color:#fff}
+.step.active .step-label{color:#1c1c1a;font-weight:600}
+.step.done .step-num{background:#15803d;border-color:#15803d;color:#fff;font-size:10px}
+.step.done .step-label{color:#15803d}
+.step-line{width:28px;height:2px;background:#d9d7d0;flex-shrink:0}
+.step-line.done{background:#15803d}
+
 /* Channels */
 .channel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
-.chip{border:1px solid #dddbd3;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px;color:#5f5e5a;display:flex;align-items:center;gap:7px;transition:all .15s}
-.chip:hover{border-color:#888780}
-.chip.selected{border-color:#1D9E75;background:#E1F5EE;color:#0F6E56}
-/* Priority */
-.pri-bar-wrap{background:#f5f4f0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;margin-top:12px}
-.pri-track{flex:1;height:5px;background:#e5e3db;border-radius:3px;overflow:hidden}
-.pri-fill{height:100%;border-radius:3px;transition:width .3s,background .3s}
-/* Tabs */
-.tabs{display:flex;gap:2px;border-bottom:1px solid #e5e3db;margin-bottom:16px}
-.tab-btn{padding:8px 16px;background:none;border:none;cursor:pointer;font-size:13px;color:#888780;border-bottom:2px solid transparent;margin-bottom:-1px}
-.tab-btn.active{color:#1a1a18;font-weight:600;border-bottom-color:#1a1a18}
+@media(max-width:480px){.channel-grid{grid-template-columns:repeat(2,1fr)}}
+.chip{border:1.5px solid #d9d7d0;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px;color:#3a3835;display:flex;align-items:center;gap:6px;transition:all .12s;user-select:none}
+.chip:hover{border-color:#2563eb;background:#eff6ff}
+.chip.on{border-color:#15803d;background:#f0fdf4;color:#15803d;font-weight:500}
+
+/* Goals */
+.goal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media(max-width:480px){.goal-grid{grid-template-columns:1fr 1fr}}
+.goal-card{border:1.5px solid #d9d7d0;border-radius:9px;padding:11px 13px;cursor:pointer;transition:all .12s}
+.goal-card:hover{border-color:#2563eb;background:#eff6ff}
+.goal-card.on{border-color:#2563eb;background:#eff6ff}
+.goal-name{font-size:13px;font-weight:600;color:#1c1c1a;margin-bottom:2px}
+.goal-desc{font-size:11px;color:#6b6966}
+.goal-card.on .goal-name{color:#1d4ed8}
+
+/* Priority pills */
+.pri-pills{display:flex;gap:4px}
+.pri-pill{padding:5px 12px;border-radius:20px;font-size:12px;border:1.5px solid #d9d7d0;background:#fff;color:#6b6966;cursor:pointer;transition:all .12s}
+.pri-pill:hover{border-color:#2563eb;color:#2563eb}
+.pri-pill.on{background:#1c1c1a;border-color:#1c1c1a;color:#fff}
+
+/* Confirm screen */
+.confirm{text-align:center;padding:40px 20px;max-width:460px;margin:0 auto}
+.confirm-icon{font-size:52px;margin-bottom:16px;animation:pop .3s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.confirm-title{font-size:22px;font-weight:700;margin-bottom:8px;color:#15803d}
+.confirm-desc{font-size:15px;color:#6b6966;margin-bottom:20px;line-height:1.6}
+.confirm-box{background:#f8f7f4;border-radius:10px;padding:14px 16px;text-align:left;margin-bottom:20px}
+.confirm-box-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b6966;margin-bottom:8px}
+.confirm-item{display:flex;align-items:flex-start;gap:8px;font-size:13px;margin-bottom:5px}
+
+/* Detail tabs */
+.tabs{display:flex;border-bottom:1px solid #e5e3dc;margin-bottom:16px;overflow-x:auto}
+.tab-btn{padding:10px 16px;font-size:13px;font-weight:500;color:#6b6966;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;cursor:pointer}
+.tab-btn:hover{color:#1c1c1a}
+.tab-btn.active{color:#1c1c1a;border-bottom-color:#1c1c1a;font-weight:600}
+
+/* Comment */
+.comment{display:flex;gap:10px;margin-bottom:12px}
+.avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.av-staff{background:#15803d}
+.av-marketing{background:#1d4ed8}
+.av-admin{background:#7c3aed}
+.comment-bub{flex:1;background:#f5f4f0;border-radius:0 10px 10px 10px;padding:10px 12px}
+.comment-bub.internal{background:#fef9c3;border:1px dashed #fde047}
+.comment-meta{font-size:11px;color:#6b6966;margin-bottom:3px;display:flex;gap:8px;flex-wrap:wrap}
+.comment-body{font-size:13px}
+
 /* Kanban */
-.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start}
-.kcard{background:#fff;border:1px solid #e5e3db;border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
-.kcard:hover{border-color:#888780}
-/* Comment thread */
-.comment{display:flex;gap:10px;padding:10px 12px;border-radius:8px;background:#f5f4f0;margin-bottom:8px}
-.avatar{width:28px;height:28px;border-radius:50%;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#185FA5;flex-shrink:0}
-/* Alert */
-.alert{border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:12px}
-.alert-error{background:#FCEBEB;color:#A32D2D}
-.alert-success{background:#EAF3DE;color:#3B6D11}
-.alert-warn{background:#FAEEDA;color:#854F0B}
-/* Step dots */
-.step-dots{display:flex;gap:5px}
-.dot{height:4px;border-radius:2px;background:#e5e3db;transition:all .2s}
-.dot.active{background:#1a1a18;width:24px}
-.dot.done{background:#5f5e5a;width:8px}
-.dot.pending{width:8px}
-/* Nav */
-.nav{display:flex;gap:2px}
-.nav-btn{padding:7px 14px;font-size:13px;border-radius:7px;border:none;cursor:pointer;background:transparent;color:#888780}
-.nav-btn:hover{background:#f0ede6;color:#1a1a18}
-.nav-btn.active{background:#f0ede6;color:#1a1a18;font-weight:600}
-/* Toast */
-#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
-.toast{padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;background:#1a1a18;color:#fff}
-.toast.error{background:#A32D2D}
-/* Tri buttons */
-.tri-opts{display:flex;gap:6px}
-.tri-btn{padding:5px 14px;font-size:12px;border-radius:7px;border:1px solid #e5e3db;background:#fff;color:#888780;cursor:pointer}
-.tri-btn.active{background:#f0ede6;border-color:#ccc9c0;color:#1a1a18;font-weight:600}
-/* Empty state */
-.empty{text-align:center;padding:3rem 1rem}
-.empty-icon{font-size:36px;margin-bottom:12px}
-/* Dashed add button */
-.add-btn{width:100%;padding:7px;border:1px dashed #dddbd3;border-radius:8px;background:none;color:#888780;cursor:pointer;font-family:inherit;font-size:13px;margin-top:6px}
-.add-btn:hover{border-color:#888780;color:#1a1a18}
-/* Table */
-.data-table{width:100%;border-collapse:collapse;font-size:13px}
-.data-table th{padding:9px 12px;font-size:11px;font-weight:600;color:#888780;text-transform:uppercase;letter-spacing:.04em;text-align:left;background:#f5f4f0}
-.data-table td{padding:10px 12px;border-top:1px solid #f0ede6}
-/* Login */
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f4f0}
-.login-box{width:100%;max-width:400px;padding:0 20px}
-.login-card{background:#fff;border-radius:14px;border:1px solid #e5e3db;padding:28px 24px}
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:start}
+@media(max-width:800px){.kanban{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.kanban{grid-template-columns:1fr}}
+.k-col{background:#f5f4f0;border-radius:10px;padding:12px}
+.k-col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.k-col-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b6966}
+.k-count{font-size:11px;background:#fff;border-radius:20px;padding:1px 8px;color:#6b6966;border:1px solid #e5e3dc}
+.k-card{background:#fff;border:1.5px solid #e5e3dc;border-radius:9px;padding:12px 13px;margin-bottom:8px;cursor:pointer;transition:all .12s}
+.k-card:hover{border-color:#2563eb;transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.k-card-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.k-card-meta{font-size:11px;color:#6b6966;margin-bottom:6px}
+
+/* Section head */
+.sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.sec-title{font-size:20px;font-weight:700}
+.sec-sub{font-size:13px;color:#6b6966;margin-top:2px}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.filter-bar input{padding:8px 12px;border:1.5px solid #d9d7d0;border-radius:7px;font-size:13px;outline:none;min-width:180px;flex:1;max-width:280px}
+.filter-bar input:focus{border-color:#2563eb}
+.pills{display:flex;gap:4px;flex-wrap:wrap}
+.pill{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:500;border:1.5px solid #d9d7d0;background:#fff;color:#6b6966;cursor:pointer}
+.pill:hover{border-color:#2563eb;color:#2563eb}
+.pill.on{background:#1c1c1a;border-color:#1c1c1a;color:#fff}
+
+/* Deliverable */
+.deliv{display:flex;align-items:center;gap:10px;padding:8px 11px;border-radius:7px;background:#f5f4f0;margin-bottom:6px}
+.deliv.done-deliv{background:#f0fdf4}
+.deliv input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#15803d}
+.deliv-label{flex:1;font-size:13px}
+.deliv-label.crossed{text-decoration:line-through;color:#9a9893}
+
+/* Timeline */
+.tl-item{display:flex;gap:12px;position:relative;padding-bottom:14px}
+.tl-dot{width:10px;height:10px;border-radius:50%;background:#d9d7d0;flex-shrink:0;margin-top:3px}
+.tl-dot.current{background:#2563eb}
+.tl-line{position:absolute;left:4px;top:13px;bottom:0;width:2px;background:#e5e3dc}
+.tl-action{font-size:13px;font-weight:600}
+.tl-meta{font-size:11px;color:#6b6966}
+
+/* Empty */
+.empty{text-align:center;padding:50px 20px}
+.empty-icon{font-size:42px;margin-bottom:14px}
+.empty-title{font-size:18px;font-weight:700;margin-bottom:8px}
+.empty-desc{font-size:14px;color:#6b6966;max-width:320px;margin:0 auto 20px}
+
+/* Bulk bar */
+.bulk-bar{background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:9px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bulk-count{font-size:13px;font-weight:700;color:#1d4ed8}
+
+/* Loading */
+.loading{display:flex;align-items:center;justify-content:center;padding:48px;gap:10px;color:#6b6966}
+.spinner{width:20px;height:20px;border:2px solid #e5e3dc;border-top-color:#2563eb;border-radius:50%;animation:spin .6s linear infinite}
+
+/* Sections label */
+.sec-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b6966;margin-bottom:10px}
+
+/* Page top back btn */
+.back-btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:#6b6966;background:none;border:none;cursor:pointer;padding:0;margin-bottom:14px;font-weight:500}
+.back-btn:hover{color:#1c1c1a}
+
+/* Scrollable table wrapper */
+.tbl-wrap{overflow-x:auto;border-radius:11px;border:1px solid #e5e3dc}
+.tbl-wrap table{border-radius:11px;overflow:hidden}
 </style>
 </head>
 <body>
+<div id="toasts"></div>
 
-<div id="toast-container"></div>
-<div id="app"></div>
+<div id="root">
+  <div class="loading"><div class="spinner"></div> Loading…</div>
+</div>
+
+<!-- Modals -->
+<div id="modal-edit" class="modal-bg"></div>
+<div id="modal-user" class="modal-bg"></div>
 
 <script>
-// ─────────────────────────────────────────
-// CONFIG
-// ─────────────────────────────────────────
-const SUPABASE_URL = 'https://bwhjbxphhfjxfaqhtlay.supabase.co'
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3aGpieHBoaGZqeGZhcWh0bGF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NjkyMjMsImV4cCI6MjA5MTI0NTIyM30.MOF7y4G7ZuIx8oTRO9TEEwyRy2zZl1pMk2dpdFvUtDw'
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+// ─── CONFIG ────────────────────────────────────────────────
+const SB = supabase.createClient(
+  'https://bwhjbxphhfjxfaqhtlay.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3aGpieHBoaGZqeGZhcWh0bGF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NjkyMjMsImV4cCI6MjA5MTI0NTIyM30.MOF7y4G7ZuIx8oTRO9TEEwyRy2zZl1pMk2dpdFvUtDw'
+)
 
-// ─────────────────────────────────────────
-// STATE
-// ─────────────────────────────────────────
-let state = {
-  session: null, mktUser: null, view: 'queue',
-  requests: [], comments: [], deliverables: [],
-  selectedReq: null, detailTab: 'brief',
-  formStep: 1, form: blankForm(),
-  adminSection: 'requests', users: [],
-  mktView: 'queue', statusHistory: []
-}
+// ─── CONSTANTS ──────────────────────────────────────────────
+const STATUS_LABEL = {new:'Submitted',reviewing:'Being Reviewed',active:'In Progress',done:'Complete'}
+const STATUS_BADGE = {new:'badge-new',reviewing:'badge-reviewing',active:'badge-active',done:'badge-done'}
+const STATUSES = ['new','reviewing','active','done']
 
-function blankForm() {
-  return {
-    program_name:'', program_type:'', start_date:'', end_date:'',
-    program_time:'', location:'', registration_deadline:'', enrollment_goal:'',
-    marketing_goal:'', urgency_level:'', impact_level:'', reach_level:'',
-    target_age:'', target_who:'', surface_reason:'', deeper_reason:'',
-    barriers:'', barrier_reduction:'', key_message:'', standout:'',
-    highlights:['','',''], post_for:'', post_why:'', post_cta:'',
-    success_metrics:[{type:'Registration count',target:''}],
-    channels:[], channel_dates:[],
-    photos_supplied:false, photos_by_marketing:false,
-    video_needed:false, graphics_existing:false, graphics_new:false,
-    partners:'', fun_fact:'', notes:'', season:'', department:''
-  }
-}
-
-// ─────────────────────────────────────────
-// CONSTANTS
-// ─────────────────────────────────────────
 const GOALS = [
-  {value:'Financial sustainability',desc:'Revenue, cost recovery'},
-  {value:'Grow participation',desc:'Enrollment, reduce barriers'},
-  {value:'Fill underutilized space',desc:'Slow days, efficiency'},
-  {value:'Build long-term participation',desc:'Feed future programs'},
-  {value:'Community connection',desc:'Visibility, partnerships'},
-  {value:'Quality & innovation',desc:'Test new concepts'},
+  {v:'Grow participation',d:'Increase enrollment'},
+  {v:'Financial sustainability',d:'Revenue & cost recovery'},
+  {v:'Fill underutilized space',d:'Busy slow times'},
+  {v:'Build long-term participation',d:'Feed future programs'},
+  {v:'Community connection',d:'Visibility & partners'},
+  {v:'Quality & innovation',d:'Test new ideas'},
 ]
 const CHANNELS = [
-  {value:'instagram',label:'Instagram',icon:'📷'},
-  {value:'facebook',label:'Facebook',icon:'👍'},
-  {value:'twitter',label:'X / Twitter',icon:'🐦'},
-  {value:'email',label:'Email blast',icon:'✉️'},
-  {value:'homepage',label:'Homepage slider',icon:'🖥'},
-  {value:'calendar',label:'District calendar',icon:'📅'},
-  {value:'tv',label:'TV screens',icon:'📺'},
-  {value:'flyer',label:'Printed flyer',icon:'📄'},
-  {value:'displaycase',label:'Display case',icon:'🏛'},
-  {value:'community',label:'Community calendars',icon:'🗞'},
-  {value:'partner',label:'Partner outreach',icon:'🤝'},
-  {value:'graphics',label:'New graphics needed',icon:'🎨'},
+  {v:'instagram',l:'Instagram',i:'📷'},
+  {v:'facebook',l:'Facebook',i:'👍'},
+  {v:'email',l:'Email blast',i:'✉️'},
+  {v:'homepage',l:'Website',i:'🖥'},
+  {v:'calendar',l:'District calendar',i:'📅'},
+  {v:'tv',l:'TV screens',i:'📺'},
+  {v:'flyer',l:'Printed flyer',i:'📄'},
+  {v:'displaycase',l:'Display case',i:'🏛'},
+  {v:'community',l:'Community calendars',i:'🗞'},
+  {v:'partner',l:'Partner outreach',i:'🤝'},
+  {v:'graphics',l:'New graphics',i:'🎨'},
+  {v:'signage',l:'On-site signage',i:'🪧'},
 ]
-const STATUSES = ['new','reviewing','active','done']
-const STATUS_LABELS = {new:'Submitted',reviewing:'Being reviewed',active:'In progress',done:'Complete'}
-const SEASONS = ['Spring 2026','Summer 2026','Fall 2026','Winter 2026','Spring 2027']
-const DEPARTMENTS = ['Recreation','Facilities','Administration','Aquatics','Athletics','Special Events','Clubhouse','Golf']
+const DEPTS = ['Recreation','Marketing','Parks','Business','Other']
+const SEASONS = ['Spring 2026','Summer 2026','Fall 2026','Winter 2026','Spring 2027','Summer 2027']
 
-function calcScore(f) {
-  let s = 0
-  const p = {urgency:{low:5,medium:15,high:30},impact:{low:5,medium:15,high:25},reach:{low:3,medium:8,high:15}}
-  if(f.urgency_level) s += p.urgency[f.urgency_level]||0
-  if(f.impact_level) s += p.impact[f.impact_level]||0
-  if(f.reach_level) s += p.reach[f.reach_level]||0
-  if(f.registration_deadline){const d=(new Date(f.registration_deadline)-new Date())/86400000;if(d<7)s+=20;else if(d<14)s+=12;else if(d<21)s+=6}
+// ─── STATE ──────────────────────────────────────────────────
+let USER = null   // mkt_users row
+let VIEW = 'requests'
+let ALL_REQS = []  // admin sees all, others see filtered
+let COMMENTS = [], DELIVS = [], HISTORY = []
+let SEL_ID = null
+let DETAIL_TAB = 'brief'
+let FORM = null
+let FORM_STEP = 1
+let LAST_SUBMITTED = null
+let FILTER = 'all'
+let SEARCH = ''
+let SHOW_ARCHIVED = false
+let SELECTED = new Set()
+let USERS_LIST = []
+let FEEDBACK_RATING = 0
+
+// ─── HELPERS ────────────────────────────────────────────────
+function fmt(d){if(!d)return'—';return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+function fmtShort(d){if(!d)return'';return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+function days(d){if(!d)return null;return Math.round((new Date(d)-new Date())/86400000)}
+function initials(n){if(!n)return'?';return n.trim().split(/\s+/).map(p=>p[0]).join('').toUpperCase().slice(0,2)}
+function avClass(r){return r==='admin'?'av-admin':r==='marketing'?'av-marketing':'av-staff'}
+function esc(s){if(s==null)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function q(id){return document.getElementById(id)}
+function score(f){
+  let s=0
+  const pu={low:5,medium:15,high:30},pi={low:5,medium:15,high:25},pr={low:3,medium:8,high:15}
+  if(f.urgency_level)s+=pu[f.urgency_level]||0
+  if(f.impact_level)s+=pi[f.impact_level]||0
+  if(f.reach_level)s+=pr[f.reach_level]||0
+  const d=days(f.registration_deadline)
+  if(d!==null){if(d<7)s+=20;else if(d<14)s+=12;else if(d<21)s+=6}
   if(f.marketing_goal==='Financial sustainability'||f.marketing_goal==='Grow participation')s+=10
   return Math.min(s,100)
 }
-function priLabel(s){return s>=70?'High priority':s>=40?'Medium priority':s>0?'Standard':'Unscored'}
-function priColor(s){return s>=70?'#E24B4A':s>=40?'#BA7517':'#639922'}
-function priBadge(s){return s>=70?'badge-high':s>=40?'badge-medium':'badge-standard'}
-function fmtDate(d){if(!d)return '—';return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
-function initials(n){if(!n)return '?';return n.split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2)}
-function daysUntil(d){if(!d)return null;return Math.round((new Date(d)-new Date())/86400000)}
-function toast(msg,type='success'){
+function scoreColor(s){return s>=70?'#dc2626':s>=40?'#d97706':'#15803d'}
+function toast(msg,type='ok'){
   const el=document.createElement('div')
-  el.className='toast'+(type==='error'?' error':'')
+  el.className='toast '+(type==='err'?'err':type==='warn'?'':type)
   el.textContent=msg
-  document.getElementById('toast-container').appendChild(el)
-  setTimeout(()=>el.remove(),3500)
+  q('toasts').appendChild(el)
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),300)},3000)
 }
-
-// ─────────────────────────────────────────
-// DATA
-// ─────────────────────────────────────────
-async function loadRequests() {
-  let q = sb.from('marketing_requests').select('*').eq('is_archived',false).order('created_at',{ascending:false})
-  if(state.mktUser?.role==='staff') q=q.eq('submitted_by_id',state.mktUser.id)
-  const {data}=await q
-  state.requests=data||[]
-  render()
+function setLoading(id,on){
+  const btn=q(id)
+  if(!btn)return
+  if(on){btn.classList.add('btn-loading');btn.disabled=true}
+  else{btn.classList.remove('btn-loading');btn.disabled=false}
 }
-async function loadUsers(){const{data}=await sb.from('mkt_users').select('*').order('full_name');state.users=data||[]}
-async function loadComments(reqId){const{data}=await sb.from('mkt_comments').select('*').eq('request_id',reqId).order('created_at',{ascending:true});state.comments=data||[]}
-async function loadDeliverables(reqId){const{data}=await sb.from('mkt_deliverables').select('*').eq('request_id',reqId).order('sort_order',{ascending:true});state.deliverables=data||[]}
-async function loadHistory(reqId){const{data}=await sb.from('mkt_status_history').select('*').eq('request_id',reqId).order('created_at',{ascending:true});state.statusHistory=data||[]}
+function isMkt(){return USER?.role==='marketing'||USER?.role==='admin'}
+function isAdmin(){return USER?.role==='admin'}
+function blankForm(){
+  return{program_name:'',program_type:'',start_date:'',end_date:'',program_time:'',
+    location:'',registration_deadline:'',enrollment_goal:'',season:'',department:'',
+    marketing_goal:'',urgency_level:'',impact_level:'',reach_level:'',
+    target_who:'',key_message:'',highlights:'',channels:[],
+    photos_supplied:false,photos_by_marketing:false,video_needed:false,graphics_new:false,notes:''}
+}
+function getReq(id){return ALL_REQS.find(r=>r.id===id)}
 
-async function submitRequest(formData) {
-  const score=calcScore(formData)
-  const payload={...formData,priority_score:score,
-    highlights:(formData.highlights||[]).filter(Boolean),
-    success_metrics:(formData.success_metrics||[]).filter(m=>m.target),
-    submitted_by_id:state.mktUser?.id||null,
-    staff_name:state.mktUser?.full_name||formData.staff_name,
-    department:state.mktUser?.department||formData.department||null,
-    status:'new'}
-  const{data,error}=await sb.from('marketing_requests').insert([payload]).select().single()
-  if(!error&&data){
-    await sb.from('mkt_status_history').insert([{request_id:data.id,changed_by_name:payload.staff_name,changed_by_role:'staff',old_status:null,new_status:'new',note:'Request submitted'}])
-    await loadRequests()
-    toast('Request submitted!')
-    return true
+// ─── AUTH ────────────────────────────────────────────────────
+async function boot(){
+  const {data:{session}} = await SB.auth.getSession()
+  if(session) await loadUser(session.user.id)
+  else showLogin()
+  SB.auth.onAuthStateChange(async(_,s)=>{
+    if(s && s.user){
+      await loadUser(s.user.id)
+    } else {
+      USER=null
+      ALL_REQS=[]
+      showLogin()
+    }
+  })
+}
+async function loadUser(authId){
+  const {data} = await SB.from('mkt_users').select('*').eq('auth_user_id',authId).single()
+  USER = data
+  if(!USER){showNoAccess();return}
+  SB.from('mkt_users').update({last_seen_at:new Date().toISOString()}).eq('id',USER.id)
+  await loadReqs()
+  showApp()
+}
+async function doLogin(){
+  const email = q('li-email')?.value?.trim()
+  const pass = q('li-pass')?.value
+  if(!email||!pass){showLoginErr('Enter your email and password');return}
+  const btn = q('li-btn')
+  if(btn){ btn.textContent='Signing in…'; btn.disabled=true }
+  const errEl = q('li-err')
+  if(errEl) errEl.style.display='none'
+  const {error} = await SB.auth.signInWithPassword({email,password:pass})
+  if(error){
+    if(btn){ btn.textContent='Sign in →'; btn.disabled=false }
+    showLoginErr(error.message)
   }
-  toast('Error submitting request','error')
-  return false
+  // On success, onAuthStateChange fires automatically and calls loadUser → showApp
+}
+function showLoginErr(msg){
+  const el=q('li-err')
+  if(el){el.textContent=msg;el.style.display='flex'}
+}
+async function doSignOut(){
+  USER=null
+  ALL_REQS=[]
+  VIEW='requests'
+  try{ await SB.auth.signOut() }catch(e){ showLogin() }
+  // onAuthStateChange will fire and call showLogin() automatically
 }
 
-async function updateStatus(id,newStatus){
-  const req=state.requests.find(r=>r.id===id)
+// ─── DATA ────────────────────────────────────────────────────
+async function loadReqs(){
+  let q2=SB.from('marketing_requests').select('*').order('created_at',{ascending:false})
+  if(USER.role==='staff') q2=q2.eq('submitted_by_id',USER.id).eq('is_archived',false)
+  const {data,error} = await q2
+  if(error){toast('Error loading requests','err');return}
+  ALL_REQS = data||[]
+}
+async function loadAllReqs(){
+  const {data,error} = await SB.from('marketing_requests').select('*').order('created_at',{ascending:false})
+  if(error){toast('Error loading','err');return}
+  ALL_REQS = data||[]
+}
+async function loadDetail(id){
+  const [c,d,h] = await Promise.all([
+    SB.from('mkt_comments').select('*').eq('request_id',id).order('created_at',{ascending:true}),
+    SB.from('mkt_deliverables').select('*').eq('request_id',id).order('sort_order',{ascending:true}),
+    SB.from('mkt_status_history').select('*').eq('request_id',id).order('created_at',{ascending:true}),
+  ])
+  COMMENTS=c.data||[]; DELIVS=d.data||[]; HISTORY=h.data||[]
+}
+async function loadUsers(){
+  const {data} = await SB.from('mkt_users').select('*').order('full_name')
+  USERS_LIST = data||[]
+}
+
+async function submitRequest(){
+  if(!FORM)return
+  const f=FORM
+  // Build clean payload — only columns that exist
+  const payload={
+    program_name:f.program_name.trim(),
+    program_type:f.program_type||null,
+    start_date:f.start_date||null,
+    end_date:f.end_date||null,
+    program_time:f.program_time||null,
+    location:f.location||null,
+    registration_deadline:f.registration_deadline||null,
+    enrollment_goal:f.enrollment_goal?parseInt(f.enrollment_goal):null,
+    season:f.season||null,
+    department:f.department||USER?.department||null,
+    marketing_goal:f.marketing_goal||null,
+    urgency_level:f.urgency_level||null,
+    impact_level:f.impact_level||null,
+    reach_level:f.reach_level||null,
+    target_who:f.target_who||null,
+    key_message:f.key_message||null,
+    highlights:f.highlights?f.highlights.split('\n').map(s=>s.trim()).filter(Boolean):[],
+    channels:Array.isArray(f.channels)?f.channels:[],
+    photos_supplied:!!f.photos_supplied,
+    photos_by_marketing:!!f.photos_by_marketing,
+    video_needed:!!f.video_needed,
+    graphics_new:!!f.graphics_new,
+    notes:f.notes||null,
+    priority_score:score(f),
+    status:'new',
+    submitted_by_id:USER.id,
+    staff_name:USER.full_name,
+    is_archived:false,
+    clarification_needed:false,
+  }
+
+  setLoading('submit-btn',true)
+  const {data,error} = await SB.from('marketing_requests').insert([payload]).select().single()
+  setLoading('submit-btn',false)
+
+  if(error){
+    toast('Error submitting: '+error.message,'err')
+    const errEl=q('form-err')
+    if(errEl){errEl.textContent='Error: '+error.message;errEl.style.display='block'}
+    return
+  }
+
+  // History + notification (non-blocking)
+  SB.from('mkt_status_history').insert([{request_id:data.id,changed_by_name:USER.full_name,changed_by_role:USER.role,new_status:'new',note:'Submitted'}])
+  SB.from('mkt_notifications').insert([{request_id:data.id,recipient_id:USER.id,type:'submitted',message:'Your request "'+data.program_name+'" was submitted',read:false}])
+
+  LAST_SUBMITTED = data
+  FORM = null; FORM_STEP = 1
+  await loadReqs()
+  VIEW='submitted'; showApp()
+}
+
+async function changeStatus(id,newStatus,note=''){
+  const req=getReq(id)
   const extra={}
-  if(newStatus==='done')extra.completed_at=new Date().toISOString()
-  if(newStatus==='active'){extra.approved_at=new Date().toISOString();extra.approved_by=state.mktUser?.full_name}
-  await sb.from('marketing_requests').update({status:newStatus,...extra}).eq('id',id)
-  await sb.from('mkt_status_history').insert([{request_id:id,changed_by_name:state.mktUser?.full_name,changed_by_role:state.mktUser?.role,old_status:req?.status,new_status:newStatus}])
-  await loadRequests()
-  if(state.selectedReq?.id===id){state.selectedReq={...state.selectedReq,status:newStatus};await loadHistory(id)}
+  if(newStatus==='done') extra.completed_at=new Date().toISOString()
+  if(newStatus==='active'){extra.approved_at=new Date().toISOString();extra.approved_by=USER.full_name}
+  const {error}=await SB.from('marketing_requests').update({status:newStatus,...extra}).eq('id',id)
+  if(error){toast('Error: '+error.message,'err');return}
+  SB.from('mkt_status_history').insert([{request_id:id,changed_by_name:USER.full_name,changed_by_role:USER.role,old_status:req?.status,new_status:newStatus,note:note||'Status updated'}])
+  if(req?.submitted_by_id && req.submitted_by_id!==USER.id){
+    SB.from('mkt_notifications').insert([{request_id:id,recipient_id:req.submitted_by_id,type:'status_change',message:'"'+req.program_name+'" is now: '+STATUS_LABEL[newStatus],read:false}])
+  }
+  // Update local state
+  const r=getReq(id);if(r){r.status=newStatus;Object.assign(r,extra)}
   toast('Status updated')
 }
 
-async function updateRequest(id,fields){
-  await sb.from('marketing_requests').update(fields).eq('id',id)
-  await loadRequests()
-  if(state.selectedReq?.id===id)state.selectedReq={...state.selectedReq,...fields}
+// ─── RENDER HELPERS ──────────────────────────────────────────
+function scoreBadge(s){
+  if(s>=70) return '<span class="badge badge-high">High Priority</span>'
+  if(s>=40) return '<span class="badge badge-medium">Medium</span>'
+  if(s>0)   return '<span class="badge badge-low">Standard</span>'
+  return ''
+}
+function priBar(s){
+  if(!s) return ''
+  return `<div class="pri-bar"><div class="pri-fill" style="width:${s}%;background:${scoreColor(s)}"></div></div>`
+}
+function deadlineTag(d,status){
+  if(!d||status==='done') return ''
+  const n=days(d)
+  if(n===null) return ''
+  const color=n<0?'#dc2626':n<7?'#dc2626':n<14?'#d97706':'#6b6966'
+  const label=n<0?'Overdue':n===0?'Today':n+'d away'
+  return `<span style="color:${color};font-weight:${n<14?600:400}">${fmtShort(d)} (${label})</span>`
 }
 
-async function addComment(body,isInternal=false){
-  if(!body.trim())return
-  await sb.from('mkt_comments').insert([{request_id:state.selectedReq.id,author_name:state.mktUser?.full_name||'Staff',author_role:state.mktUser?.role||'staff',body,is_internal:isInternal}])
-  await loadComments(state.selectedReq.id)
-  render()
-}
+// ─── VIEWS ────────────────────────────────────────────────────
 
-async function addDeliverable(label,dueDate){
-  await sb.from('mkt_deliverables').insert([{request_id:state.selectedReq.id,label,due_date:dueDate||null,sort_order:state.deliverables.length}])
-  await loadDeliverables(state.selectedReq.id)
-  render()
-}
-
-async function toggleDeliverable(id,completed){
-  await sb.from('mkt_deliverables').update({completed,completed_at:completed?new Date().toISOString():null,completed_by:completed?state.mktUser?.full_name:null}).eq('id',id)
-  await loadDeliverables(state.selectedReq.id)
-  render()
-}
-
-// ─────────────────────────────────────────
-// AUTH
-// ─────────────────────────────────────────
-async function init(){
-  const{data:{session}}=await sb.auth.getSession()
-  state.session=session
-  if(session)await fetchMktUser(session.user.id)
-  sb.auth.onAuthStateChange(async(_,s)=>{state.session=s;if(s)await fetchMktUser(s.user.id);else{state.mktUser=null;render()}})
-  if(state.mktUser||!session)render()
-}
-
-async function fetchMktUser(authId){
-  const{data}=await sb.from('mkt_users').select('*').eq('auth_user_id',authId).single()
-  state.mktUser=data||null
-  if(data){
-    sb.from('mkt_users').update({last_seen_at:new Date().toISOString()}).eq('id',data.id)
-    await loadRequests()
-  }else render()
-}
-
-async function signIn(email,password){
-  const{error}=await sb.auth.signInWithPassword({email,password})
-  return error
-}
-
-async function signOut(){
-  await sb.auth.signOut()
-  state.mktUser=null;state.session=null;render()
-}
-
-// ─────────────────────────────────────────
-// RENDER ENGINE
-// ─────────────────────────────────────────
-function render(){
-  const app=document.getElementById('app')
-  if(!state.session||!state.mktUser){app.innerHTML=renderLogin();bindLogin();return}
-  app.innerHTML=renderShell()
-  bindShell()
-}
-
-// ─────────────────────────────────────────
-// LOGIN
-// ─────────────────────────────────────────
-function renderLogin(){return`
-<div class="login-wrap">
-  <div class="login-box">
-    <div style="text-align:center;margin-bottom:32px">
-      <div style="font-size:40px;margin-bottom:10px">🦬</div>
-      <h1 style="font-size:22px;font-weight:700;margin-bottom:4px">BGPD Marketing Hub</h1>
-      <p style="font-size:14px;color:#888780">Sign in to continue</p>
+function showLogin(){
+  q('root').innerHTML=`
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#111827 0%,#1e3a5f 100%);padding:20px">
+    <div style="width:100%;max-width:380px">
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="font-size:42px;margin-bottom:12px">🦬</div>
+        <h1 style="font-size:24px;font-weight:700;color:#fff;margin-bottom:4px">BGPD Marketing Hub</h1>
+        <p style="font-size:14px;color:rgba(255,255,255,.55)">Buffalo Grove Park District</p>
+      </div>
+      <div class="card">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="li-email" placeholder="you@bgparks.org" autocomplete="email" autofocus>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="li-pass" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div id="li-err" class="alert alert-error" style="display:none;margin-bottom:10px"></div>
+        <button id="li-btn" class="btn btn-primary btn-block" onclick="doLogin()">Sign in →</button>
+      </div>
+      <p style="text-align:center;font-size:12px;color:rgba(255,255,255,.35);margin-top:14px">Contact your admin to get access</p>
     </div>
-    <div class="login-card">
-      <div class="field"><label>Email</label><input type="email" id="li-email" placeholder="you@bgparks.org"></div>
-      <div class="field"><label>Password</label><input type="password" id="li-pass" placeholder="••••••••"></div>
-      <div id="li-err"></div>
-      <button id="li-btn" class="btn btn-submit" style="width:100%;margin-top:8px">Sign in</button>
-    </div>
-    <p style="text-align:center;font-size:12px;color:#aaa9a2;margin-top:14px">Contact your admin to get access</p>
-  </div>
-</div>`}
-
-function bindLogin(){
-  document.getElementById('li-btn').onclick=async()=>{
-    const email=document.getElementById('li-email').value
-    const pass=document.getElementById('li-pass').value
-    const err=await signIn(email,pass)
-    if(err)document.getElementById('li-err').innerHTML=`<div class="alert alert-error" style="margin-top:8px">${err.message}</div>`
-  }
-  document.getElementById('li-pass').onkeydown=e=>{if(e.key==='Enter')document.getElementById('li-btn').click()}
+  </div>`
+  q('li-pass')?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()})
+  q('li-email')?.addEventListener('keydown',e=>{if(e.key==='Enter')q('li-pass')?.focus()})
 }
 
-// ─────────────────────────────────────────
-// SHELL
-// ─────────────────────────────────────────
-function renderShell(){
-  const u=state.mktUser
-  const role=u.role
-  const roleColors={staff:{bg:'#EAF3DE',color:'#3B6D11'},marketing:{bg:'#E6F1FB',color:'#185FA5'},admin:{bg:'#FAEEDA',color:'#854F0B'}}
-  const rc=roleColors[role]||{bg:'#f0ede6',color:'#888780'}
-  const isAdmin=role==='admin'
-  const isMkt=role==='marketing'||role==='admin'
-  const reviewing=state.requests.filter(r=>r.status==='reviewing').length
+function showNoAccess(){
+  q('root').innerHTML=`<div class="empty" style="padding:80px 20px"><div class="empty-icon">🔒</div><div class="empty-title">No access</div><div class="empty-desc">Your account exists but needs a profile. Contact your admin.</div><button class="btn" onclick="doSignOut()">Sign out</button></div>`
+}
 
-  const navItems = isMkt
-    ? [{v:'queue',l:'Queue'},{v:'workload',l:'Workload'},{v:'calendar',l:'Calendar'},{v:'performance',l:'Performance'}]
-    : [{v:'dashboard',l:'My Requests'},{v:'new',l:'+ New Request'}]
-  const adminNav = isAdmin ? [{v:'admin',l:'Admin'}] : []
-  const allNav = [...navItems,...adminNav]
+function showApp(){
+  const role=USER?.role
+  const tabs=[]
+  tabs.push({id:'requests',label:'Requests'})
+  if(isMkt()) tabs.push({id:'queue',label:'Queue'},{id:'workload',label:'Workload'},{id:'calendar',label:'Calendar'},{id:'performance',label:'Performance'})
+  if(isAdmin()) tabs.push({id:'admin',label:'Admin'},{id:'users',label:'Users'})
+  const newBtn = `<button class="nav-btn accent" onclick="goNew()">+ New Request</button>`
 
-  return`
-<header>
-  <div style="display:flex;align-items:center;gap:12px">
-    <div style="width:32px;height:32px;border-radius:50%;background:#f0ede6;display:flex;align-items:center;justify-content:center;font-size:16px">🦬</div>
-    <div>
-      <div style="font-size:14px;font-weight:700">BGPD Marketing Hub</div>
-      <div style="font-size:11px;color:#888780">Buffalo Grove Park District</div>
+  const roleBadge=`<span class="user-badge ${role}">${role}</span>`
+  const activeTab = ['new','submitted','detail'].includes(VIEW)?'requests':VIEW
+
+  q('root').innerHTML=`
+  <header class="header">
+    <div class="header-logo">🦬 <span>BGPD</span> Marketing Hub</div>
+    <div class="header-right">
+      <span style="font-size:13px;color:rgba(255,255,255,.7);display:none" id="hdr-name">${esc(USER?.full_name)}</span>
+      ${roleBadge}
+      <button class="btn-signout" onclick="doSignOut()">Sign out</button>
     </div>
-  </div>
+  </header>
   <nav class="nav">
-    ${allNav.map(n=>`<button class="nav-btn${state.view===n.v?' active':''}" onclick="setView('${n.v}')">${n.l}${n.v==='queue'&&reviewing>0?`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#BA7517;margin-left:4px;vertical-align:middle"></span>`:''}</button>`).join('')}
+    ${tabs.map(t=>`<button class="nav-btn${activeTab===t.id?' active':''}" onclick="navTo('${t.id}')">${esc(t.label)}</button>`).join('')}
+    ${newBtn}
   </nav>
-  <div style="display:flex;align-items:center;gap:12px">
-    <div style="display:flex;align-items:center;gap:8px">
-      <div style="width:28px;height:28px;border-radius:50%;background:${rc.bg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:${rc.color}">${initials(u.full_name)}</div>
-      <div>
-        <div style="font-size:13px;font-weight:600">${u.full_name}</div>
-        <span class="badge badge-${role}">${role.charAt(0).toUpperCase()+role.slice(1)}</span>
-      </div>
-    </div>
-    <button class="btn btn-sm" onclick="signOut()">Sign out</button>
-  </div>
-</header>
-<main>
-  ${state.view==='new' ? renderRequestForm()
-    : state.view==='detail' ? renderDetail()
-    : state.view==='dashboard' ? renderStaffDashboard()
-    : state.view==='queue' ? renderQueue()
-    : state.view==='workload' ? renderWorkload()
-    : state.view==='calendar' ? renderCalendar()
-    : state.view==='performance' ? renderPerformance()
-    : state.view==='admin' ? renderAdmin()
-    : ''}
-</main>`
+  <div class="page" id="main-content"></div>`
+
+  renderView()
 }
 
-function bindShell(){
-  bindCurrentView()
+function renderView(){
+  const el=q('main-content')
+  if(!el)return
+  if(VIEW==='requests') el.innerHTML = isMkt() ? renderAllReqs() : renderMyReqs()
+  else if(VIEW==='new') el.innerHTML = renderForm()
+  else if(VIEW==='submitted') el.innerHTML = renderConfirm()
+  else if(VIEW==='detail') el.innerHTML = renderDetail()
+  else if(VIEW==='queue') el.innerHTML = renderQueue()
+  else if(VIEW==='workload') el.innerHTML = renderWorkload()
+  else if(VIEW==='calendar') el.innerHTML = renderCalendar()
+  else if(VIEW==='performance') el.innerHTML = renderPerformance()
+  else if(VIEW==='admin') el.innerHTML = renderAdminReqs()
+  else if(VIEW==='users') el.innerHTML = renderUsers()
+  bindView()
 }
 
-function setView(v){
-  state.view=v
-  state.selectedReq=null
-  if(v==='queue'||v==='dashboard')loadRequests()
-  if(v==='admin')loadUsers()
-  render()
+async function navTo(v){
+  FILTER='all';SEARCH='';SELECTED=new Set();SEL_ID=null
+  if(v==='requests'&&isMkt()) await loadAllReqs()
+  else if(v==='admin') await loadAllReqs()
+  else if(v==='users') await loadUsers()
+  else if(v==='queue'||v==='workload'||v==='calendar'||v==='performance') await loadAllReqs()
+  else await loadReqs()
+  VIEW=v; showApp()
+}
+function goNew(){
+  FORM=blankForm(); FORM_STEP=1; VIEW='new'; showApp()
 }
 
-// ─────────────────────────────────────────
-// STAFF DASHBOARD
-// ─────────────────────────────────────────
-function renderStaffDashboard(){
-  const reqs=state.requests
-  const needsInfo=reqs.filter(r=>r.clarification_needed)
+// ─── MY REQUESTS (staff) ──────────────────────────────────────
+function renderMyReqs(){
+  const reqs=ALL_REQS
+  const needs=reqs.filter(r=>r.clarification_needed&&r.status!=='done')
+  let shown=reqs
+  if(FILTER==='active') shown=reqs.filter(r=>r.status!=='done')
+  if(FILTER==='done') shown=reqs.filter(r=>r.status==='done')
+  if(SEARCH){const q2=SEARCH.toLowerCase();shown=shown.filter(r=>r.program_name?.toLowerCase().includes(q2))}
+
   return`
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-    <div><h2 style="font-size:20px;font-weight:700;margin:0">My requests</h2><p style="font-size:13px;color:#888780;margin-top:2px">Track and manage your marketing requests</p></div>
-    <button class="btn btn-submit" onclick="setView('new')">+ New request</button>
+  <div class="sec-head">
+    <div><div class="sec-title">My Requests</div><div class="sec-sub">Track your marketing requests</div></div>
+    <button class="btn btn-primary" onclick="goNew()">+ New Request</button>
   </div>
+  ${needs.length?`<div class="alert alert-warn">⚠️ <div><strong>${needs.length} request${needs.length>1?'s need':'needs'} your attention</strong> — marketing has a question. Click the request to reply.</div></div>`:''}
   <div class="g4" style="margin-bottom:20px">
-    <div class="stat"><div class="stat-label">Total</div><div class="stat-val">${reqs.length}</div></div>
-    <div class="stat"><div class="stat-label">In progress</div><div class="stat-val" style="color:#3B6D11">${reqs.filter(r=>r.status==='active').length}</div></div>
-    <div class="stat"><div class="stat-label">Complete</div><div class="stat-val" style="color:#888780">${reqs.filter(r=>r.status==='done').length}</div></div>
-    <div class="stat"><div class="stat-label">Needs your info</div><div class="stat-val" style="color:#BA7517">${needsInfo.length}</div></div>
+    <div class="stat"><div class="stat-label">Total</div><div class="stat-value">${reqs.length}</div></div>
+    <div class="stat"><div class="stat-label">Active</div><div class="stat-value" style="color:#2563eb">${reqs.filter(r=>r.status!=='done').length}</div></div>
+    <div class="stat"><div class="stat-label">Complete</div><div class="stat-value" style="color:#15803d">${reqs.filter(r=>r.status==='done').length}</div></div>
+    <div class="stat"><div class="stat-label">Needs info</div><div class="stat-value" style="color:#d97706">${needs.length}</div></div>
   </div>
-  ${reqs.length===0?`<div class="empty"><div class="empty-icon">📋</div><h3 style="font-size:17px;font-weight:600;margin-bottom:8px">No requests yet</h3><p style="font-size:14px;color:#888780;margin-bottom:16px">Submit your first marketing request to get started.</p><button class="btn btn-primary" onclick="setView('new')">+ New request</button></div>`:''}
-  ${needsInfo.length>0?`<div style="font-size:12px;font-weight:600;color:#854F0B;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Needs your attention</div>${needsInfo.map(r=>renderReqCard(r)).join('')}<div style="margin-bottom:16px"></div>`:''}
-  ${reqs.filter(r=>!r.clarification_needed).map(r=>renderReqCard(r)).join('')}
-  `
-}
-
-function renderReqCard(r){
-  const score=r.priority_score||0
-  const days=daysUntil(r.registration_deadline)
-  return`<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="openDetail('${r.id}')">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
-      <div>
-        <div style="font-size:14px;font-weight:600">${r.program_name}${r.clarification_needed?'<span class="badge badge-reviewing" style="margin-left:8px">Needs info</span>':''}</div>
-        <div style="font-size:12px;color:#888780;margin-top:2px">${r.program_type||''} ${r.marketing_goal?'· '+r.marketing_goal:''}</div>
-      </div>
-      <span class="badge badge-${r.status}">${STATUS_LABELS[r.status]}</span>
-    </div>
-    <div style="background:#f5f4f0;border-radius:3px;height:4px;overflow:hidden"><div style="width:${score}%;height:100%;background:${priColor(score)};border-radius:3px"></div></div>
-    <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:#888780">
-      <span>Submitted ${fmtDate(r.created_at)}</span>
-      ${r.registration_deadline?`<span style="color:${days!==null&&days<14?'#BA7517':'#888780'}">Deadline: ${fmtDate(r.registration_deadline)}</span>`:''}
-      ${r.assigned_to_name?`<span>Assigned to ${r.assigned_to_name}</span>`:''}
-    </div>
-  </div>`
-}
-
-// ─────────────────────────────────────────
-// REQUEST FORM
-// ─────────────────────────────────────────
-function renderRequestForm(){
-  const f=state.form
-  const score=calcScore(f)
-  const step=state.formStep
-  const steps=['Program details','Audience & messaging','Channels & assets','Review & submit']
-
-  return`
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-    <button class="btn btn-sm" onclick="setView('dashboard')">← Cancel</button>
-    <h2 style="font-size:18px;font-weight:700;flex:1">New marketing request</h2>
-    <div class="step-dots">
-      ${[1,2,3,4].map(n=>`<div class="dot ${n<step?'done':n===step?'active':'pending'}"></div>`).join('')}
-    </div>
-    <span style="font-size:12px;color:#888780">Step ${step} of 4 — ${steps[step-1]}</span>
-  </div>
-  ${step===1?renderFormStep1(f,score):''}
-  ${step===2?renderFormStep2(f):''}
-  ${step===3?renderFormStep3(f):''}
-  ${step===4?renderFormStep4(f,score):''}
-  <div id="form-err"></div>
-  <div style="display:flex;justify-content:space-between;margin-top:8px">
-    <div>${step>1?`<button class="btn" onclick="formStep(${step-1})">← Back</button>`:''}</div>
-    <div>${step<4
-      ?`<button class="btn btn-primary" onclick="formStep(${step+1})">${steps[step]} →</button>`
-      :`<button id="submit-btn" class="btn btn-submit" onclick="submitForm()">Submit request →</button>`
-    }</div>
-  </div>`
-}
-
-function renderFormStep1(f,score){
-  const days=daysUntil(f.registration_deadline||f.start_date)
-  let leadAlert=''
-  if(days!==null&&days<21){
-    const cls=days<7?'alert-error':'alert-warn'
-    const msg=days<7?'⚠ Less than 7 days — rush request':'⚡ Under 3 weeks — limited channels available'
-    leadAlert=`<div class="alert ${cls}">${msg}</div>`
-  }
-  return`
-  <div class="card">
-    <div class="card-title">Program or event</div>
-    <div class="g3">
-      <div class="field" style="grid-column:span 2"><label>Program name</label><input value="${f.program_name}" oninput="setForm('program_name',this.value)" placeholder="e.g. Youth Flag Football League"></div>
-      <div class="field"><label>Type</label><select onchange="setForm('program_type',this.value)"><option value="">Select…</option>${['Program / class','Community event','Facility rental','Special event','Membership campaign','League / sport'].map(o=>`<option${f.program_type===o?' selected':''}>${o}</option>`).join('')}</select></div>
-    </div>
-    <div class="g4" style="margin-top:10px">
-      <div class="field"><label>Start date</label><input type="date" value="${f.start_date}" oninput="setForm('start_date',this.value)"></div>
-      <div class="field"><label>End date</label><input type="date" value="${f.end_date}" oninput="setForm('end_date',this.value)"></div>
-      <div class="field"><label>Time</label><input value="${f.program_time}" oninput="setForm('program_time',this.value)" placeholder="e.g. Sat 9–11am"></div>
-      <div class="field"><label>Location</label><input value="${f.location}" oninput="setForm('location',this.value)" placeholder="e.g. Alcott Center"></div>
-    </div>
-    <div class="g4" style="margin-top:10px">
-      <div class="field"><label>Reg. deadline</label><input type="date" value="${f.registration_deadline}" oninput="setForm('registration_deadline',this.value)"></div>
-      <div class="field"><label>Enrollment goal</label><input type="number" value="${f.enrollment_goal}" oninput="setForm('enrollment_goal',this.value)" placeholder="# participants"></div>
-      <div class="field"><label>Season</label><select onchange="setForm('season',this.value)"><option value="">Select…</option>${SEASONS.map(s=>`<option${f.season===s?' selected':''}>${s}</option>`).join('')}</select></div>
-      <div class="field"><label>Department</label><select onchange="setForm('department',this.value)"><option value="">Select…</option>${DEPARTMENTS.map(d=>`<option${f.department===d?' selected':''}>${d}</option>`).join('')}</select></div>
-    </div>
-    ${leadAlert}
-  </div>
-  <div class="card">
-    <div class="card-title">Primary marketing goal</div>
-    <div class="goal-grid">
-      ${GOALS.map(g=>`<div class="goal-opt${f.marketing_goal===g.value?' selected':''}" onclick="setForm('marketing_goal','${g.value}')"><div class="goal-name">${g.value}</div><div class="goal-desc">${g.desc}</div></div>`).join('')}
+  <div class="filter-bar">
+    <input type="search" placeholder="Search requests…" value="${esc(SEARCH)}" oninput="SEARCH=this.value;renderView()">
+    <div class="pills">
+      <button class="pill${FILTER==='all'?' on':''}" onclick="FILTER='all';renderView()">All (${reqs.length})</button>
+      <button class="pill${FILTER==='active'?' on':''}" onclick="FILTER='active';renderView()">Active</button>
+      <button class="pill${FILTER==='done'?' on':''}" onclick="FILTER='done';renderView()">Complete</button>
     </div>
   </div>
-  <div class="card">
-    <div class="card-title">Priority assessment</div>
-    ${[{label:'Urgency level',key:'urgency_level',opts:['low','medium','high'],labels:['Low','Medium','High']},
-       {label:'Revenue / strategic impact',key:'impact_level',opts:['low','medium','high'],labels:['Low','Medium','High']},
-       {label:'Audience reach',key:'reach_level',opts:['low','medium','high'],labels:['Narrow','Medium','Broad']}
-    ].map(row=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <span style="font-size:13px;color:#5f5e5a">${row.label}</span>
-        <div class="tri-opts">${row.opts.map((o,i)=>`<button class="tri-btn${f[row.key]===o?' active':''}" onclick="setForm('${row.key}','${o}')">${row.labels[i]}</button>`).join('')}</div>
-      </div>`).join('')}
-    <div class="pri-bar-wrap">
-      <span style="font-size:12px;color:#888780">Priority score</span>
-      <div class="pri-track"><div class="pri-fill" style="width:${score}%;background:${priColor(score)}"></div></div>
-      <span style="font-size:13px;font-weight:600;color:${score>0?priColor(score):'#888780'}">${score>0?score+'/100':'—'}</span>
-      ${score>0?`<span class="badge ${priBadge(score)}">${priLabel(score)}</span>`:''}
-    </div>
-  </div>`
-}
-
-function renderFormStep2(f){
-  const oneliner=[f.post_for&&`For ${f.post_for}`,f.post_why&&f.post_why,f.post_cta&&f.post_cta].filter(Boolean).join('. ')
-  return`
-  <div class="card">
-    <div class="card-title">Target audience</div>
-    <div class="g2">
-      <div class="field"><label>Age range</label><input value="${f.target_age}" oninput="setForm('target_age',this.value)" placeholder="e.g. Ages 6–12"></div>
-      <div class="field"><label>Who are they?</label><input value="${f.target_who}" oninput="setForm('target_who',this.value)" placeholder="e.g. Kids and their parents"></div>
-    </div>
-    <div class="g2" style="margin-top:10px">
-      <div class="field"><label>Surface reason they sign up</label><textarea oninput="setForm('surface_reason',this.value)" placeholder="What they say they want…">${f.surface_reason}</textarea></div>
-      <div class="field"><label>Deeper reason (what really matters)</label><textarea oninput="setForm('deeper_reason',this.value)" placeholder="What actually drives them…">${f.deeper_reason}</textarea></div>
-    </div>
-    <div class="g2" style="margin-top:10px">
-      <div class="field"><label>Barriers</label><input value="${f.barriers}" oninput="setForm('barriers',this.value)" placeholder="Cost, timing, intimidation…"></div>
-      <div class="field"><label>How to reduce barriers</label><input value="${f.barrier_reduction}" oninput="setForm('barrier_reduction',this.value)" placeholder="Messaging, pricing, framing…"></div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Key message</div>
-    <div class="field"><label>Single most important thing the audience should know</label><div class="tip">This becomes the headline for all creative assets</div><textarea oninput="setForm('key_message',this.value)" placeholder="e.g. This league is for kids who've never played — small teams, patient coaches, no experience needed.">${f.key_message}</textarea></div>
-    <div class="field" style="margin-top:10px"><label>What makes this stand out?</label><textarea oninput="setForm('standout',this.value)" placeholder="Unique differentiators…">${f.standout}</textarea></div>
-  </div>
-  <div class="card">
-    <div class="card-title">Program highlights (3–5 bullets)</div>
-    <div id="highlights-list">
-      ${(f.highlights||[]).map((h,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px"><span style="color:#888780">•</span><input value="${h}" oninput="setHighlight(${i},this.value)" placeholder="Highlight ${i+1}"></div>`).join('')}
-    </div>
-    <button class="add-btn" onclick="addHighlight()">+ Add highlight</button>
-  </div>
-  <div class="card">
-    <div class="card-title">One-post summary</div>
-    <div class="g3">
-      <div class="field"><label>Who it's for</label><input value="${f.post_for}" oninput="setForm('post_for',this.value)" placeholder="Kids new to football"></div>
-      <div class="field"><label>Why it matters</label><input value="${f.post_why}" oninput="setForm('post_why',this.value)" placeholder="Builds confidence and skills"></div>
-      <div class="field"><label>Call to action</label><input value="${f.post_cta}" oninput="setForm('post_cta',this.value)" placeholder="Register before teams fill"></div>
-    </div>
-    ${oneliner?`<div style="margin-top:10px;background:#f5f4f0;border-radius:8px;padding:10px 12px"><div style="font-size:11px;color:#888780;margin-bottom:4px">Draft copy</div><div style="font-size:13px">${oneliner}</div></div>`:''}
-  </div>`
-}
-
-function renderFormStep3(f){
-  return`
-  <div class="card">
-    <div class="card-title">Promotion channels</div>
-    <div class="channel-grid">
-      ${CHANNELS.map(ch=>`<div class="chip${(f.channels||[]).includes(ch.value)?' selected':''}" onclick="toggleChannel('${ch.value}')"><span>${ch.icon}</span>${ch.label}</div>`).join('')}
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Photos, video & graphics</div>
-    <div class="g3">
-      <div><div style="font-size:13px;font-weight:600;margin-bottom:8px">Photos</div>
-        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;margin-bottom:6px"><input type="checkbox" ${f.photos_supplied?'checked':''} onchange="setForm('photos_supplied',this.checked)"> I'll supply photos</label>
-        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer"><input type="checkbox" ${f.photos_by_marketing?'checked':''} onchange="setForm('photos_by_marketing',this.checked)"> Marketing dept to shoot</label>
-      </div>
-      <div><div style="font-size:13px;font-weight:600;margin-bottom:8px">Video</div>
-        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer"><input type="checkbox" ${f.video_needed?'checked':''} onchange="setForm('video_needed',this.checked)"> Video needed</label>
-      </div>
-      <div><div style="font-size:13px;font-weight:600;margin-bottom:8px">Graphics</div>
-        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;margin-bottom:6px"><input type="checkbox" ${f.graphics_existing?'checked':''} onchange="setForm('graphics_existing',this.checked)"> Use existing guide graphics</label>
-        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer"><input type="checkbox" ${f.graphics_new?'checked':''} onchange="setForm('graphics_new',this.checked)"> Design new graphics</label>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title">Partners & notes</div>
-    <div class="field"><label>Who else could help promote this?</label><input value="${f.partners||''}" oninput="setForm('partners',this.value)" placeholder="Schools, PTOs, libraries, sponsors…"></div>
-    <div class="field" style="margin-top:10px"><label>Fun fact or hook</label><textarea oninput="setForm('fun_fact',this.value)" placeholder="Something surprising or shareable…">${f.fun_fact||''}</textarea></div>
-    <div class="field" style="margin-top:10px"><label>Anything else marketing should know?</label><textarea oninput="setForm('notes',this.value)" placeholder="Budget limits, approval needs, past campaigns to reference…">${f.notes||''}</textarea></div>
-  </div>`
-}
-
-function renderFormStep4(f,score){
-  return`
-  <div class="card">
-    <div class="card-title">Review your request</div>
-    <div style="background:#f5f4f0;border-radius:8px;padding:4px 14px">
-      ${[['Program',f.program_name],['Type',f.program_type],['Season',f.season],['Department',f.department],['Dates',[f.start_date,f.end_date].filter(Boolean).join(' → ')],['Location',f.location],['Reg. deadline',fmtDate(f.registration_deadline)],['Marketing goal',f.marketing_goal],['Priority score',score>0?`${score}/100 — ${priLabel(score)}`:'—'],['Audience',[f.target_age,f.target_who].filter(Boolean).join(', ')],['Key message',f.key_message],['Channels',(f.channels||[]).join(', ')]]
-        .filter(([,v])=>v)
-        .map(([l,v])=>`<div style="display:flex;gap:12px;padding:7px 0;border-bottom:1px solid #eceae2;font-size:13px"><div style="width:140px;color:#888780;flex-shrink:0">${l}</div><div>${v}</div></div>`).join('')}
-    </div>
-  </div>`
-}
-
-// ─────────────────────────────────────────
-// REQUEST DETAIL
-// ─────────────────────────────────────────
-function renderDetail(){
-  const r=state.selectedReq
-  if(!r)return''
-  const score=r.priority_score||0
-  const days=daysUntil(r.registration_deadline)
-  const isMkt=state.mktUser?.role==='marketing'||state.mktUser?.role==='admin'
-  const nextStatus=STATUSES[STATUSES.indexOf(r.status)+1]
-  const prevStatus=STATUSES[STATUSES.indexOf(r.status)-1]
-
-  return`
-  <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px">
-    <button class="btn btn-sm" onclick="setView(${state.mktUser?.role==='staff'?'\'dashboard\'':'\'queue\''})">← Back</button>
-    <div style="flex:1">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <h2 style="font-size:18px;font-weight:700;margin:0">${r.program_name}</h2>
-        <span class="badge badge-${r.status}">${STATUS_LABELS[r.status]}</span>
-        ${r.clarification_needed?'<span class="badge badge-reviewing">Needs info from staff</span>':''}
-      </div>
-      <div style="font-size:12px;color:#888780;margin-top:2px">#${r.request_number||''} · ${r.staff_name||''} · ${r.department||''} · Submitted ${fmtDate(r.created_at)}</div>
-    </div>
-    ${isMkt?`<div style="display:flex;gap:6px;flex-wrap:wrap">
-      ${prevStatus?`<button class="btn btn-sm" onclick="updateStatus('${r.id}','${prevStatus}')">← ${STATUS_LABELS[prevStatus]}</button>`:''}
-      ${nextStatus?`<button class="btn btn-sm btn-success" onclick="updateStatus('${r.id}','${nextStatus}')">Move to ${STATUS_LABELS[nextStatus]} →</button>`:''}
-    </div>`:''}
-  </div>
-  ${r.clarification_needed?`<div class="alert alert-warn" style="margin-bottom:16px"><strong>Marketing needs more information</strong>${r.clarification_note?'<br>'+r.clarification_note:''}<br><span style="font-size:12px">Please reply in the Messages tab.</span></div>`:''}
-  <div class="tabs">
-    ${['Brief','Messages','Deliverables','Timeline'].map(t=>`<button class="tab-btn${state.detailTab===t.toLowerCase()?' active':''}" onclick="setDetailTab('${t.toLowerCase()}')">${t}</button>`).join('')}
-  </div>
-  ${state.detailTab==='brief'?renderDetailBrief(r,score,isMkt):''}
-  ${state.detailTab==='messages'?renderMessages(isMkt):''}
-  ${state.detailTab==='deliverables'?renderDeliverables(isMkt):''}
-  ${state.detailTab==='timeline'?renderTimeline():''}
-  `
-}
-
-function renderDetailBrief(r,score,isMkt){
-  const fields=[['Program',r.program_name],['Type',r.program_type],['Dates',[r.start_date,r.end_date].filter(Boolean).map(fmtDate).join(' → ')],['Time',r.program_time],['Location',r.location],['Reg. deadline',fmtDate(r.registration_deadline)],['Enrollment goal',r.enrollment_goal?r.enrollment_goal+' participants':null],['Marketing goal',r.marketing_goal],['Audience',[r.target_age,r.target_who].filter(Boolean).join(', ')],['Key message',r.key_message],['What makes it stand out',r.standout],['Barriers',r.barriers],['Partners',r.partners]]
-  const highlights=(r.highlights||[]).filter(Boolean)
-  const channels=(r.channels||[])
-  return`
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-    ${fields.filter(([,v])=>v).map(([l,v])=>`<div style="background:#f5f4f0;border-radius:8px;padding:10px 12px"><div style="font-size:11px;color:#888780;margin-bottom:3px">${l}</div><div style="font-size:13px">${v}</div></div>`).join('')}
-    ${highlights.length>0?`<div style="background:#f5f4f0;border-radius:8px;padding:10px 12px;grid-column:span 2"><div style="font-size:11px;color:#888780;margin-bottom:6px">Highlights</div>${highlights.map(h=>`<div style="font-size:13px;margin-bottom:4px">• ${h}</div>`).join('')}</div>`:''}
-    ${channels.length>0?`<div style="background:#f5f4f0;border-radius:8px;padding:10px 12px;grid-column:span 2"><div style="font-size:11px;color:#888780;margin-bottom:6px">Channels</div><div style="display:flex;flex-wrap:wrap;gap:6px">${channels.map(ch=>{const c=CHANNELS.find(x=>x.value===ch);return`<span style="font-size:12px;padding:3px 9px;background:#fff;border-radius:20px;border:1px solid #e5e3db">${c?.icon} ${c?.label||ch}</span>`}).join('')}</div></div>`:''}
-  </div>
-  ${isMkt?`<div class="card">
-    <div class="card-title">Marketing team notes</div>
-    <textarea id="mkt-notes" style="width:100%;min-height:72px">${r.marketing_notes||''}</textarea>
-    <button class="btn btn-sm btn-primary" style="margin-top:8px" onclick="saveMktNotes()">Save notes</button>
-  </div>`:r.marketing_notes?`<div class="card"><div class="card-title">Note from marketing</div><div style="font-size:13px">${r.marketing_notes}</div></div>`:''}
-  ${!isMkt&&r.status==='done'&&!r.feedback_rating?renderFeedbackForm(r):''}
-  `
-}
-
-function renderFeedbackForm(r){
-  return`<div class="card" style="margin-top:12px">
-    <div class="card-title">How did this campaign go?</div>
-    <div style="display:flex;gap:6px;margin-bottom:10px">
-      ${[1,2,3,4,5].map(n=>`<button style="font-size:22px;background:none;border:none;cursor:pointer;opacity:${(state.feedbackRating||0)>=n?1:0.3}" onclick="setFeedbackRating(${n})">⭐</button>`).join('')}
-    </div>
-    <textarea id="feedback-note" placeholder="Optional comments…" style="width:100%;min-height:60px"></textarea>
-    <button class="btn btn-success btn-sm" style="margin-top:8px" onclick="submitFeedback('${r.id}')">Submit feedback</button>
-  </div>`
-}
-
-function renderMessages(isMkt){
-  const visible=isMkt?state.comments:state.comments.filter(c=>!c.is_internal)
-  return`
-  <div style="margin-bottom:14px">
-    ${visible.length===0?`<div style="font-size:13px;color:#aaa9a2;font-style:italic;padding:8px 0">No messages yet</div>`:''}
-    ${visible.map(c=>`<div class="comment" style="background:${c.is_internal?'#FAEEDA':'#f5f4f0'};${c.is_internal?'border:1px solid #FAC775':''}">
-      <div class="avatar">${initials(c.author_name)}</div>
-      <div style="flex:1">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
-          <span style="font-size:12px;font-weight:600">${c.author_name}</span>
-          <span class="badge badge-${c.author_role}">${c.author_role}</span>
-          ${c.is_internal?'<span class="badge badge-reviewing">Internal note</span>':''}
-          <span style="font-size:11px;color:#aaa9a2;margin-left:auto">${fmtDate(c.created_at)}</span>
+  ${shown.length===0?`<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">${reqs.length===0?'No requests yet':'Nothing matches'}</div><div class="empty-desc">${reqs.length===0?'Submit your first marketing request to get started.':'Try changing your search.'}</div>${reqs.length===0?'<button class="btn btn-primary" onclick="goNew()">+ New Request</button>':''}</div>`:''}
+  ${shown.map(r=>{
+    const s=r.priority_score||0
+    const clar=r.clarification_needed&&r.status!=='done'
+    return`<div class="req-card${clar?' clarification':''}" onclick="openDetail('${r.id}')">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
+        <div style="flex:1;min-width:0">
+          <div class="req-card-title">${esc(r.program_name)}${clar?`<span class="badge badge-reviewing" style="margin-left:8px;font-size:10px">⚠ Needs your info</span>`:''}</div>
+          <div class="req-card-meta">
+            ${r.program_type?`<span>${esc(r.program_type)}</span>`:''}
+            ${r.marketing_goal?`<span>· ${esc(r.marketing_goal)}</span>`:''}
+          </div>
         </div>
-        <div style="font-size:13px">${c.body}</div>
+        <span class="badge ${STATUS_BADGE[r.status]}">${STATUS_LABEL[r.status]}</span>
       </div>
-    </div>`).join('')}
-  </div>
-  <textarea id="comment-body" placeholder="Add a message… (Cmd+Enter to send)" style="width:100%;min-height:64px;margin-bottom:8px"></textarea>
-  <div style="display:flex;align-items:center;gap:10px">
-    ${isMkt?`<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#888780;cursor:pointer"><input type="checkbox" id="internal-check"> Internal note (hidden from staff)</label>`:''}
-    <div style="margin-left:auto"><button class="btn btn-sm btn-primary" onclick="sendComment()">Send</button></div>
-  </div>`
-}
-
-function renderDeliverables(canEdit){
-  const done=state.deliverables.filter(d=>d.completed).length
-  return`
-  ${state.deliverables.length>0?`<div style="font-size:11px;color:#888780;margin-bottom:8px">${done}/${state.deliverables.length} complete</div>`:''}
-  <div style="margin-bottom:10px">
-    ${state.deliverables.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;background:${d.completed?'#EAF3DE':'#f5f4f0'};margin-bottom:6px">
-      <input type="checkbox" ${d.completed?'checked':''} onchange="toggleDeliverable('${d.id}',this.checked)" ${canEdit?'':'disabled'} style="width:15px;height:15px">
-      <span style="flex:1;font-size:13px;${d.completed?'text-decoration:line-through;color:#5f5e5a':''}">${d.label}</span>
-      ${d.completed_by?`<span style="font-size:11px;color:#3B6D11">✓ ${d.completed_by}</span>`:''}
-    </div>`).join('')}
-  </div>
-  ${canEdit?`<div style="display:flex;gap:8px"><input id="new-deliv" placeholder="Add deliverable…" style="flex:1"><input type="date" id="new-deliv-date" style="width:140px"><button class="btn btn-sm btn-primary" onclick="addDelivFromUI()">Add</button></div>`:''}
-  `
-}
-
-function renderTimeline(){
-  if(!state.statusHistory.length)return`<div style="font-size:13px;color:#aaa9a2;font-style:italic">No history yet</div>`
-  return state.statusHistory.map((h,i)=>`
-  <div style="display:flex;gap:12px;position:relative">
-    <div style="display:flex;flex-direction:column;align-items:center;width:20px;flex-shrink:0">
-      <div style="width:8px;height:8px;border-radius:50%;background:${i===state.statusHistory.length-1?'#1D9E75':'#dddbd3'};margin-top:4px;flex-shrink:0"></div>
-      ${i<state.statusHistory.length-1?`<div style="width:1px;flex:1;background:#f0ede6;min-height:20px"></div>`:''}
-    </div>
-    <div style="padding-bottom:12px">
-      <div style="font-size:12px;font-weight:600">${h.new_status?STATUS_LABELS[h.new_status]||h.new_status:'Submitted'}</div>
-      <div style="font-size:11px;color:#888780">${h.changed_by_name} · ${fmtDate(h.created_at)}</div>
-      ${h.note?`<div style="font-size:12px;color:#5f5e5a;margin-top:2px">${h.note}</div>`:''}
-    </div>
-  </div>`).join('')
-}
-
-// ─────────────────────────────────────────
-// QUEUE (marketing)
-// ─────────────────────────────────────────
-function renderQueue(){
-  const reqs=state.requests
-  const reviewing=reqs.filter(r=>r.status==='reviewing').length
-  const active=reqs.filter(r=>r.status==='active').length
-  const high=reqs.filter(r=>(r.priority_score||0)>=70&&r.status!=='done').length
-
-  return`
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <div><h2 style="font-size:20px;font-weight:700;margin:0">Marketing queue</h2></div>
-    <div class="nav">
-      ${['queue','workload','calendar','performance'].map(v=>`<button class="nav-btn${state.view===v?' active':''}" onclick="setView('${v}')">${v.charAt(0).toUpperCase()+v.slice(1)}</button>`).join('')}
-    </div>
-  </div>
-  <div class="g4" style="margin-bottom:18px">
-    <div class="stat"><div class="stat-label">Active</div><div class="stat-val">${reqs.filter(r=>r.status!=='done').length}</div></div>
-    <div class="stat"><div class="stat-label">Being reviewed</div><div class="stat-val" style="color:#BA7517">${reviewing}</div></div>
-    <div class="stat"><div class="stat-label">In progress</div><div class="stat-val" style="color:#3B6D11">${active}</div></div>
-    <div class="stat"><div class="stat-label">High priority</div><div class="stat-val" style="color:#E24B4A">${high}</div></div>
-  </div>
-  ${reqs.length===0?`<div class="empty"><div class="empty-icon">✅</div><h3>Queue is clear</h3></div>`:''}
-  <div class="kanban">
-    ${STATUSES.map(status=>{
-      const items=reqs.filter(r=>r.status===status).sort((a,b)=>(b.priority_score||0)-(a.priority_score||0))
-      return`<div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <span style="font-size:11px;font-weight:600;letter-spacing:.06em;color:#888780;text-transform:uppercase">${STATUS_LABELS[status]}</span>
-          <span style="font-size:11px;background:#f0ede6;border-radius:20px;padding:1px 8px;color:#5f5e5a">${items.length}</span>
+      ${priBar(s)}
+      <div class="req-card-footer">
+        <div style="display:flex;gap:12px;font-size:12px;color:#6b6966;flex-wrap:wrap">
+          <span>Submitted ${fmt(r.created_at)}</span>
+          ${deadlineTag(r.registration_deadline,r.status)}
         </div>
-        ${items.length===0?`<div style="border:1px dashed #e5e3db;border-radius:10px;padding:16px;text-align:center;font-size:12px;color:#aaa9a2">Empty</div>`:''}
-        ${items.map(r=>{
-          const score=r.priority_score||0
-          const days=daysUntil(r.registration_deadline)
-          const chLabels=(r.channels||[]).slice(0,3).map(v=>CHANNELS.find(c=>c.value===v)?.label||v).join(', ')
-          return`<div class="kcard" onclick="openDetail('${r.id}')">
-            <div style="height:3px;border-radius:2px;background:${priColor(score)};margin-bottom:10px;margin-top:-2px"></div>
-            <div style="font-size:13px;font-weight:600;margin-bottom:3px">${r.program_name}${r.clarification_needed?'<span class="badge badge-reviewing" style="margin-left:6px;font-size:10px">Needs info</span>':''}</div>
-            <div style="font-size:11px;color:#888780">${r.staff_name||''} · ${r.department||''}</div>
-            ${chLabels?`<div style="font-size:11px;color:#888780;margin-top:2px">${chLabels}</div>`:''}
-            <div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap">
-              ${score>0?`<span class="badge ${priBadge(score)}">${score}/100</span>`:''}
-              ${r.assigned_to_name?`<span class="badge badge-marketing">${r.assigned_to_name}</span>`:''}
-              ${days!==null&&days<=14?`<span class="badge ${days<7?'badge-high':'badge-reviewing'}">${days}d left</span>`:''}
-            </div>
-          </div>`
-        }).join('')}
-      </div>`
-    }).join('')}
-  </div>`
-}
-
-// ─────────────────────────────────────────
-// WORKLOAD
-// ─────────────────────────────────────────
-function renderWorkload(){
-  const active=state.requests.filter(r=>r.status!=='done')
-  const byPerson={}
-  active.forEach(r=>{const n=r.assigned_to_name||'Unassigned';if(!byPerson[n])byPerson[n]=[];byPerson[n].push(r)})
-  return`
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-    <h2 style="font-size:20px;font-weight:700;margin:0">Workload</h2>
-    <div class="nav">${['queue','workload','calendar','performance'].map(v=>`<button class="nav-btn${state.view===v?' active':''}" onclick="setView('${v}')">${v.charAt(0).toUpperCase()+v.slice(1)}</button>`).join('')}</div>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
-    ${Object.entries(byPerson).map(([name,reqs])=>`
-    <div class="card">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <div class="avatar" style="width:32px;height:32px;font-size:13px">${initials(name)}</div>
-        <div><div style="font-size:13px;font-weight:600">${name}</div><div style="font-size:11px;color:#888780">${reqs.length} active</div></div>
+        ${scoreBadge(s)}
       </div>
-      ${reqs.map(r=>`<div style="font-size:12px;padding:5px 8px;background:#f5f4f0;border-radius:6px;margin-bottom:4px"><div style="font-weight:500;margin-bottom:2px">${r.program_name}</div><span class="badge badge-${r.status}">${STATUS_LABELS[r.status]}</span></div>`).join('')}
-    </div>`).join('')}
-  </div>`
-}
-
-// ─────────────────────────────────────────
-// CALENDAR
-// ─────────────────────────────────────────
-function renderCalendar(){
-  const upcoming=state.requests
-    .filter(r=>r.registration_deadline||r.start_date)
-    .map(r=>({...r,targetDate:r.registration_deadline||r.start_date}))
-    .sort((a,b)=>new Date(a.targetDate)-new Date(b.targetDate))
-    .slice(0,20)
-  return`
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-    <h2 style="font-size:20px;font-weight:700;margin:0">Calendar</h2>
-    <div class="nav">${['queue','workload','calendar','performance'].map(v=>`<button class="nav-btn${state.view===v?' active':''}" onclick="setView('${v}')">${v.charAt(0).toUpperCase()+v.slice(1)}</button>`).join('')}</div>
-  </div>
-  <div style="font-size:13px;color:#888780;margin-bottom:14px">Upcoming deadlines and start dates</div>
-  ${upcoming.length===0?`<div class="empty"><div class="empty-icon">📅</div><h3 style="font-size:17px">No upcoming dates</h3></div>`:''}
-  ${upcoming.map(r=>{
-    const days=daysUntil(r.targetDate)
-    const d=new Date(r.targetDate)
-    return`<div style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#fff;border:1px solid #e5e3db;border-radius:9px;margin-bottom:8px">
-      <div style="width:48px;text-align:center;flex-shrink:0">
-        <div style="font-size:20px;font-weight:700;color:${days<7?'#E24B4A':days<14?'#BA7517':'#1a1a18'};line-height:1">${d.getDate()}</div>
-        <div style="font-size:10px;color:#888780;text-transform:uppercase">${d.toLocaleString('en-US',{month:'short'})}</div>
-      </div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:600">${r.program_name}</div>
-        <div style="font-size:11px;color:#888780">${r.registration_deadline?'Reg. deadline':'Start date'} · ${r.staff_name}</div>
-      </div>
-      <span class="badge badge-${r.status}">${STATUS_LABELS[r.status]}</span>
-      ${days!==null?`<span class="badge ${days<0?'badge-high':days<7?'badge-high':days<14?'badge-reviewing':'badge-standard'}">${days<0?'Passed':days+'d'}</span>`:''}
     </div>`
   }).join('')}`
 }
 
-// ─────────────────────────────────────────
-// PERFORMANCE
-// ─────────────────────────────────────────
-function renderPerformance(){
-  const reqs=state.requests
-  const total=reqs.length
-  const done=reqs.filter(r=>r.status==='done').length
-  const avgScore=total?Math.round(reqs.reduce((s,r)=>s+(r.priority_score||0),0)/total):0
-  const byDept={},byGoal={},byCh={}
-  reqs.forEach(r=>{
-    const d=r.department||'Unknown';byDept[d]=(byDept[d]||0)+1
-    const g=r.marketing_goal||'Unknown';byGoal[g]=(byGoal[g]||0)+1
-    ;(r.channels||[]).forEach(c=>{byCh[c]=(byCh[c]||0)+1})
-  })
-  const topCh=Object.entries(byCh).sort((a,b)=>b[1]-a[1]).slice(0,6)
-  const topDept=Object.entries(byDept).sort((a,b)=>b[1]-a[1]).slice(0,6)
+// ─── ALL REQUESTS (mkt/admin) ──────────────────────────────────
+function renderAllReqs(){
+  let reqs=ALL_REQS
+  if(!SHOW_ARCHIVED) reqs=reqs.filter(r=>!r.is_archived)
+  if(FILTER!=='all') reqs=reqs.filter(r=>r.status===FILTER)
+  if(SEARCH){const sq=SEARCH.toLowerCase();reqs=reqs.filter(r=>r.program_name?.toLowerCase().includes(sq)||r.staff_name?.toLowerCase().includes(sq)||r.department?.toLowerCase().includes(sq))}
+  const src=ALL_REQS.filter(r=>!r.is_archived)
+  const admin=isAdmin()
+  const sel=SELECTED
+
   return`
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-    <h2 style="font-size:20px;font-weight:700;margin:0">Performance</h2>
-    <div class="nav">${['queue','workload','calendar','performance'].map(v=>`<button class="nav-btn${state.view===v?' active':''}" onclick="setView('${v}')">${v.charAt(0).toUpperCase()+v.slice(1)}</button>`).join('')}</div>
+  <div class="sec-head">
+    <div><div class="sec-title">All Requests</div><div class="sec-sub">${admin?'Admin — full access':'Marketing team view'}</div></div>
+    <button class="btn btn-primary" onclick="goNew()">+ New Request</button>
   </div>
   <div class="g4" style="margin-bottom:20px">
-    <div class="stat"><div class="stat-label">Total requests</div><div class="stat-val">${total}</div></div>
-    <div class="stat"><div class="stat-label">Complete</div><div class="stat-val" style="color:#3B6D11">${done}</div></div>
-    <div class="stat"><div class="stat-label">Avg priority score</div><div class="stat-val" style="color:#BA7517">${avgScore}</div></div>
-    <div class="stat"><div class="stat-label">Active now</div><div class="stat-val" style="color:#185FA5">${reqs.filter(r=>r.status!=='done').length}</div></div>
+    <div class="stat"><div class="stat-label">Total</div><div class="stat-value">${src.length}</div></div>
+    <div class="stat"><div class="stat-label">In Progress</div><div class="stat-value" style="color:#2563eb">${src.filter(r=>r.status==='active').length}</div></div>
+    <div class="stat"><div class="stat-label">Complete</div><div class="stat-value" style="color:#15803d">${src.filter(r=>r.status==='done').length}</div></div>
+    <div class="stat"><div class="stat-label">High Priority</div><div class="stat-value" style="color:#dc2626">${src.filter(r=>(r.priority_score||0)>=70&&r.status!=='done').length}</div></div>
   </div>
-  <div class="g2">
-    <div class="card">
-      <div class="card-title">By department</div>
-      ${topDept.map(([d,c])=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d}</span>
-        <div style="width:80px;height:5px;background:#f0ede6;border-radius:3px;overflow:hidden"><div style="width:${total?((c/total)*100).toFixed(0):0}%;height:100%;background:#378ADD;border-radius:3px"></div></div>
-        <span style="font-size:12px;color:#888780;width:20px;text-align:right">${c}</span>
+  <div class="filter-bar">
+    <input type="search" placeholder="Search name, staff, department…" value="${esc(SEARCH)}" oninput="SEARCH=this.value;renderView()">
+    <div class="pills">
+      ${[['all','All'],['new','Submitted'],['reviewing','Reviewing'],['active','In Progress'],['done','Complete']].map(([v,l])=>`<button class="pill${FILTER===v?' on':''}" onclick="FILTER='${v}';renderView()">${l}</button>`).join('')}
+    </div>
+    <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#6b6966;cursor:pointer;white-space:nowrap">
+      <input type="checkbox" ${SHOW_ARCHIVED?'checked':''} onchange="SHOW_ARCHIVED=this.checked;renderView()"> Show archived
+    </label>
+  </div>
+  ${admin&&sel.size>0?`<div class="bulk-bar">
+    <span class="bulk-count">${sel.size} selected</span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-left:auto">
+      ${[['new','Submitted'],['reviewing','Reviewing'],['active','Active'],['done','Complete']].map(([v,l])=>`<button class="btn btn-xs" onclick="bulkStatus('${v}')">→ ${l}</button>`).join('')}
+      <button class="btn btn-xs btn-yellow" onclick="bulkArchive()">📦 Archive</button>
+      <button class="btn btn-xs btn-red" onclick="bulkDelete()">🗑 Delete</button>
+      <button class="btn btn-xs" onclick="SELECTED=new Set();renderView()">✕</button>
+    </div>
+  </div>`:''}
+  ${reqs.length===0?`<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">No requests match</div></div>`:
+  `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr>
+      ${admin?`<th style="width:32px"><input type="checkbox" onchange="selAll(this.checked,[${reqs.map(r=>`'${r.id}'`).join(',')}])"></th>`:''}
+      <th>Program</th><th>Staff</th><th>Dept</th><th>Status</th><th>Score</th><th>Deadline</th>
+      <th>${admin?'Actions':'View'}</th>
+    </tr></thead>
+    <tbody>
+      ${reqs.map(r=>{
+        const s=r.priority_score||0
+        const d=days(r.registration_deadline)
+        return`<tr style="opacity:${r.is_archived?.6:1}">
+          ${admin?`<td><input type="checkbox" ${sel.has(r.id)?'checked':''} onchange="selToggle('${r.id}',this.checked)"></td>`:''}
+          <td>
+            <div style="font-weight:600;font-size:13px">${r.is_archived?'<span class="badge" style="font-size:10px;background:#f3f4f6;color:#6b7280;margin-right:4px">Archived</span>':''}${esc(r.program_name)}</div>
+            <div style="font-size:11px;color:#6b6966">${esc(r.marketing_goal||'—')}</div>
+          </td>
+          <td style="font-size:13px">${esc(r.staff_name||'—')}</td>
+          <td style="font-size:12px;color:#6b6966">${esc(r.department||'—')}</td>
+          <td>${admin
+            ?`<select onchange="quickStatus('${r.id}',this.value)" style="font-size:12px;border:1px solid #d9d7d0;border-radius:6px;padding:4px 6px;background:#fff;cursor:pointer">${STATUSES.map(v=>`<option value="${v}"${r.status===v?' selected':''}>${STATUS_LABEL[v]}</option>`).join('')}</select>`
+            :`<span class="badge ${STATUS_BADGE[r.status]}">${STATUS_LABEL[r.status]}</span>`
+          }</td>
+          <td>${s>0?`<div style="display:flex;align-items:center;gap:5px"><div style="width:36px;height:4px;background:#e5e3dc;border-radius:2px;overflow:hidden"><div style="width:${s}%;height:100%;background:${scoreColor(s)}"></div></div><span style="font-size:11px;font-weight:600;color:${scoreColor(s)}">${s}</span></div>`:'<span style="color:#ccc;font-size:11px">—</span>'}</td>
+          <td style="font-size:12px;white-space:nowrap;color:${d!==null&&d<0?'#dc2626':d!==null&&d<7?'#dc2626':d!==null&&d<14?'#d97706':'#6b6966'};font-weight:${d!==null&&d<14?600:400}">
+            ${r.registration_deadline?fmt(r.registration_deadline)+(d!==null?' ('+(d<0?'overdue':d+'d')+')':''):'—'}
+          </td>
+          <td>
+            <div style="display:flex;gap:3px">
+              <button class="btn btn-xs" onclick="openDetail('${r.id}')" title="View">👁</button>
+              ${admin?`
+                <button class="btn btn-xs" onclick="openEditModal('${r.id}')" title="Edit">✏️</button>
+                ${r.status==='done'?`<button class="btn btn-xs btn-yellow" onclick="reopenReq('${r.id}')" title="Reopen">↩</button>`:''}
+                ${r.is_archived
+                  ?`<button class="btn btn-xs btn-green" onclick="unarchiveReq('${r.id}')" title="Restore">📤</button>`
+                  :`<button class="btn btn-xs" onclick="archiveReq('${r.id}')" title="Archive">📦</button>`
+                }
+                <button class="btn btn-xs btn-red" onclick="deleteReq('${r.id}')" title="Delete">🗑</button>`
+              :''}
+            </div>
+          </td>
+        </tr>`
+      }).join('')}
+    </tbody>
+  </table></div>`}`
+}
+
+// ─── NEW REQUEST FORM ─────────────────────────────────────────
+function renderForm(){
+  if(!FORM) FORM=blankForm()
+  const f=FORM
+  const s=score(f)
+
+  return`
+  <button class="back-btn" onclick="backToReqs()">← Back to Requests</button>
+  <div class="sec-head">
+    <div>
+      <div class="sec-title">${FORM_STEP===1?'New Marketing Request':'Add More Details'}</div>
+      <div class="sec-sub">${FORM_STEP===1?'Required fields marked ✱ — everything else optional':'Tell us more (optional — all fields)'}</div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step ${FORM_STEP>=1?(FORM_STEP>1?'done':'active'):''}">
+      <div class="step-num">${FORM_STEP>1?'✓':1}</div><div class="step-label">The basics</div>
+    </div>
+    <div class="step-line ${FORM_STEP>1?'done':''}"></div>
+    <div class="step ${FORM_STEP>=2?'active':''}">
+      <div class="step-num">2</div><div class="step-label">Channels & details</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step"><div class="step-num">3</div><div class="step-label">Submit</div></div>
+  </div>
+
+  ${FORM_STEP===1?renderFormS1(f,s):renderFormS2(f)}
+
+  <div style="display:flex;justify-content:space-between;margin-top:20px;gap:10px">
+    <div>${FORM_STEP>1?`<button class="btn" onclick="FORM_STEP=1;renderView()">← Back</button>`:''}</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="backToReqs()">Cancel</button>
+      ${FORM_STEP===1
+        ?`<button class="btn btn-primary" onclick="validateStep1()">Next: Add Details →</button>`
+        :`<button id="submit-btn" class="btn btn-primary" onclick="handleSubmit()">Submit Request ✓</button>`
+      }
+    </div>
+  </div>
+  <div id="form-err" class="alert alert-error" style="display:none;margin-top:12px"></div>`
+}
+
+function renderFormS1(f,s){
+  return`
+  <div class="card" style="margin-bottom:14px">
+    <div class="sec-label">Program or Event</div>
+    <div id="field-name" class="field">
+      <label>Program name <span class="req">✱</span></label>
+      <input id="f-name" value="${esc(f.program_name)}" placeholder="e.g. Youth Flag Football League" oninput="FORM.program_name=this.value">
+      <div class="err">Program name is required</div>
+    </div>
+    <div class="g2">
+      <div class="field">
+        <label>Type <span class="opt">(optional)</span></label>
+        <select id="f-type" onchange="FORM.program_type=this.value">
+          <option value="">Select…</option>
+          ${['Program / class','Community event','Facility rental','Special event','Membership campaign','League / sport'].map(o=>`<option${f.program_type===o?' selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Department <span class="opt">(optional)</span></label>
+        <select onchange="FORM.department=this.value">
+          <option value="">Select…</option>
+          ${DEPTS.map(d=>`<option${f.department===d?' selected':''}>${d}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Start date <span class="opt">(optional)</span></label>
+        <input type="date" value="${f.start_date}" onchange="FORM.start_date=this.value">
+      </div>
+      <div class="field">
+        <label>Reg. deadline <span class="opt">(optional)</span></label>
+        <input type="date" value="${f.registration_deadline}" onchange="FORM.registration_deadline=this.value;rerenderScore()">
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="sec-label" style="margin-bottom:10px">Primary Marketing Goal <span class="req" style="font-weight:400;font-size:12px;text-transform:none;letter-spacing:0"> ✱ required</span></div>
+    <div id="goal-err" class="alert alert-error" style="display:none;margin-bottom:10px">Please select a goal</div>
+    <div class="goal-grid" id="goal-grid">
+      ${GOALS.map(g=>`<div class="goal-card${f.marketing_goal===g.v?' on':''}" onclick="FORM.marketing_goal='${g.v}';document.querySelectorAll('.goal-card').forEach(el=>el.classList.remove('on'));this.classList.add('on');q('goal-err').style.display='none'">
+        <div class="goal-name">${g.v}</div>
+        <div class="goal-desc">${g.d}</div>
       </div>`).join('')}
     </div>
-    <div class="card">
-      <div class="card-title">Top channels</div>
-      ${topCh.map(([ch,c])=>{const channel=CHANNELS.find(x=>x.value===ch);return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <span style="font-size:14px">${channel?.icon||'📌'}</span>
-        <span style="font-size:13px;flex:1">${channel?.label||ch}</span>
-        <span style="font-size:12px;color:#888780">${c}</span>
+  </div>
+
+  <div class="card">
+    <div class="sec-label" style="margin-bottom:12px">Quick Priority Assessment <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:#9a9893">(optional)</span></div>
+    ${[['Urgency','urgency_level'],['Impact / Revenue','impact_level'],['Audience reach','reach_level']].map(([label,key])=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+      <span style="font-size:13px;color:#3a3835">${label}</span>
+      <div class="pri-pills" id="pri-${key}">
+        ${['low','medium','high'].map((o,i)=>`<button class="pri-pill${f[key]===o?' on':''}" onclick="FORM['${key}']='${o}';document.querySelectorAll('#pri-${key} .pri-pill').forEach(b=>b.classList.remove('on'));this.classList.add('on');rerenderScore()">${['Low','Medium','High'][i]}</button>`).join('')}
+      </div>
+    </div>`).join('')}
+    <div id="score-bar" style="background:#f5f4f0;border-radius:8px;padding:10px 14px;margin-top:8px${s>0?'':';display:none'}">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:12px;color:#6b6966">Priority score</span>
+        <div style="flex:1;height:5px;background:#e5e3dc;border-radius:3px;overflow:hidden">
+          <div style="width:${s}%;height:100%;background:${scoreColor(s)};border-radius:3px"></div>
+        </div>
+        ${scoreBadge(s)} <span style="font-size:12px;font-weight:600;color:${scoreColor(s)}">${s}/100</span>
+      </div>
+    </div>
+  </div>`
+}
+
+function renderFormS2(f){
+  return`
+  <div class="card" style="margin-bottom:14px">
+    <div class="sec-label" style="margin-bottom:12px">Promotion Channels <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:#9a9893">(optional)</span></div>
+    <div class="channel-grid">
+      ${CHANNELS.map(ch=>`<div class="chip${(f.channels||[]).includes(ch.v)?' on':''}" onclick="toggleCh('${ch.v}')">
+        <span>${ch.i}</span>${ch.l}
+      </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="sec-label" style="margin-bottom:12px">Dates & Details <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:#9a9893">(all optional)</span></div>
+    <div class="g2">
+      <div class="field"><label>End date</label><input type="date" value="${f.end_date}" onchange="FORM.end_date=this.value"></div>
+      <div class="field"><label>Season</label>
+        <select onchange="FORM.season=this.value">
+          <option value="">Select…</option>
+          ${SEASONS.map(s=>`<option${f.season===s?' selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field"><label>Time</label><input value="${esc(f.program_time)}" placeholder="e.g. Saturdays 9–11am" oninput="FORM.program_time=this.value"></div>
+      <div class="field"><label>Location</label><input value="${esc(f.location)}" placeholder="e.g. Alcott Center" oninput="FORM.location=this.value"></div>
+      <div class="field"><label>Enrollment goal</label><input type="number" value="${f.enrollment_goal}" placeholder="# participants" oninput="FORM.enrollment_goal=this.value"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="sec-label" style="margin-bottom:12px">Message & Content</div>
+    <div class="field">
+      <label>Target audience</label>
+      <input value="${esc(f.target_who)}" placeholder="e.g. Kids ages 6–12 and their families" oninput="FORM.target_who=this.value">
+    </div>
+    <div class="field">
+      <label>Key message</label>
+      <textarea placeholder="Most important thing your audience should know…" oninput="FORM.key_message=this.value">${esc(f.key_message)}</textarea>
+      <div class="hint">This becomes the headline for all creative assets</div>
+    </div>
+    <div class="field">
+      <label>Program highlights</label>
+      <textarea placeholder="One per line:&#10;Fun for all skill levels&#10;Equipment provided" style="min-height:80px" oninput="FORM.highlights=this.value">${esc(f.highlights)}</textarea>
+    </div>
+    <div class="field">
+      <label>Anything else marketing should know?</label>
+      <textarea placeholder="Budget limits, approvals needed, past campaigns…" oninput="FORM.notes=this.value">${esc(f.notes)}</textarea>
+    </div>
+  </div>
+
+  <div class="card" style="background:#f8f7f4">
+    <div class="sec-label" style="margin-bottom:10px">Photos, Video & Graphics</div>
+    <div style="display:flex;flex-wrap:wrap;gap:14px">
+      ${[['photos_supplied','I\'ll supply photos'],['photos_by_marketing','Marketing to shoot'],['video_needed','Video needed'],['graphics_new','New graphics needed']].map(([k,l])=>`<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" ${f[k]?'checked':''} onchange="FORM['${k}']=this.checked"> ${l}</label>`).join('')}
+    </div>
+  </div>`
+}
+
+function rerenderScore(){
+  const f=FORM;if(!f)return
+  const s=score(f)
+  const bar=q('score-bar')
+  if(bar){
+    bar.style.display=s>0?'':'none'
+    if(s>0) bar.innerHTML=`<div style="display:flex;align-items:center;gap:12px"><span style="font-size:12px;color:#6b6966">Priority score</span><div style="flex:1;height:5px;background:#e5e3dc;border-radius:3px;overflow:hidden"><div style="width:${s}%;height:100%;background:${scoreColor(s)};border-radius:3px"></div></div>${scoreBadge(s)} <span style="font-size:12px;font-weight:600;color:${scoreColor(s)}">${s}/100</span></div>`
+  }
+}
+
+function toggleCh(v){
+  if(!FORM)return
+  const chs=FORM.channels||[]
+  FORM.channels=chs.includes(v)?chs.filter(c=>c!==v):[...chs,v]
+  document.querySelectorAll('.channel-grid .chip').forEach(el=>{
+    const chV=CHANNELS.find(c=>el.textContent.trim().includes(c.l))?.v
+    if(chV) el.classList.toggle('on',FORM.channels.includes(chV))
+  })
+}
+
+function validateStep1(){
+  let ok=true
+  const nameField=q('field-name')
+  const nameInput=q('f-name')
+  if(!FORM?.program_name?.trim()){
+    ok=false
+    nameField?.classList.add('field-error')
+    nameInput?.focus()
+  } else nameField?.classList.remove('field-error')
+  if(!FORM?.marketing_goal){
+    ok=false
+    const ge=q('goal-err');if(ge)ge.style.display='flex'
+  }
+  if(!ok){
+    const fe=q('form-err')
+    if(fe){fe.textContent='Please fill in the required fields above.';fe.style.display='flex'}
+    window.scrollTo({top:0,behavior:'smooth'})
+    return
+  }
+  const fe=q('form-err');if(fe)fe.style.display='none'
+  FORM_STEP=2; renderView(); window.scrollTo({top:0,behavior:'smooth'})
+}
+
+async function handleSubmit(){
+  if(!FORM)return
+  const fe=q('form-err');if(fe)fe.style.display='none'
+  await submitRequest()
+}
+
+function backToReqs(){
+  FORM=null;FORM_STEP=1
+  navTo('requests')
+}
+
+// ─── CONFIRM SCREEN ────────────────────────────────────────────
+function renderConfirm(){
+  const r=LAST_SUBMITTED
+  return`<div class="confirm">
+    <div class="confirm-icon">✅</div>
+    <div class="confirm-title">Request Submitted!</div>
+    <div class="confirm-desc"><strong>${esc(r?.program_name||'Your request')}</strong> has been sent to the marketing team.</div>
+    <div class="confirm-box">
+      <div class="confirm-box-title">What happens next</div>
+      <div class="confirm-item">📬 Marketing will review your request</div>
+      <div class="confirm-item">🔔 You'll see status updates in My Requests</div>
+      <div class="confirm-item">💬 They may have questions via the Messages tab</div>
+      <div class="confirm-item">⏱ Standard lead time is 21 days</div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="navTo('requests')">← Back to My Requests</button>
+      <button class="btn" onclick="FORM=blankForm();FORM_STEP=1;VIEW='new';showApp()">Submit Another</button>
+    </div>
+  </div>`
+}
+
+// ─── DETAIL VIEW ───────────────────────────────────────────────
+function renderDetail(){
+  const r=getReq(SEL_ID)
+  if(!r) return `<button class="back-btn" onclick="backFromDetail()">← Back</button><div class="empty"><div class="empty-icon">❓</div><div class="empty-title">Not found</div></div>`
+
+  const mkt=isMkt(), admin=isAdmin()
+  const s=r.priority_score||0
+  const nextStatus={new:'reviewing',reviewing:'active',active:'done'}[r.status]
+  const prevStatus={reviewing:'new',active:'reviewing',done:'active'}[r.status]
+  const chs=Array.isArray(r.channels)?r.channels:[]
+  const hi=Array.isArray(r.highlights)?r.highlights:typeof r.highlights==='string'?r.highlights.split('\n').filter(Boolean):[]
+
+  return`
+  <button class="back-btn" onclick="backFromDetail()">← Back to ${mkt?'Requests':'My Requests'}</button>
+
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          <h2 style="font-size:19px;font-weight:700;margin:0">${esc(r.program_name)}</h2>
+          <span class="badge ${STATUS_BADGE[r.status]}">${STATUS_LABEL[r.status]}</span>
+          ${r.is_archived?'<span class="badge" style="background:#f3f4f6;color:#6b7280">Archived</span>':''}
+          ${r.clarification_needed&&!mkt?'<span class="badge badge-reviewing">⚠ Needs your info</span>':''}
+        </div>
+        <div style="font-size:13px;color:#6b6966;display:flex;gap:12px;flex-wrap:wrap">
+          ${r.request_number?`<span>#${r.request_number}</span>`:''}
+          <span>By ${esc(r.staff_name||'—')}</span>
+          ${r.department?`<span>· ${esc(r.department)}</span>`:''}
+          <span>· ${fmt(r.created_at)}</span>
+        </div>
+      </div>
+      ${mkt?`<div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${prevStatus?`<button class="btn btn-sm" onclick="detailChangeStatus('${r.id}','${prevStatus}')">← ${STATUS_LABEL[prevStatus]}</button>`:''}
+        ${nextStatus?`<button class="btn btn-sm btn-primary" onclick="detailChangeStatus('${r.id}','${nextStatus}')">→ ${STATUS_LABEL[nextStatus]}</button>`:''}
+        ${admin?`<button class="btn btn-sm" onclick="openEditModal('${r.id}')" title="Edit">✏️ Edit</button>`:''}
+        ${admin&&r.status==='done'?`<button class="btn btn-sm btn-yellow" onclick="reopenReq('${r.id}')">↩ Reopen</button>`:''}
+      </div>`:''}
+    </div>
+    ${r.clarification_needed&&!mkt?`<div class="alert alert-warn" style="margin-top:12px;margin-bottom:0">💬 <div><strong>Marketing needs more info from you</strong>${r.clarification_note?`<br><em>${esc(r.clarification_note)}</em>`:''}<br><span style="font-size:12px">Reply in the Messages tab below.</span></div></div>`:''}
+  </div>
+
+  <div class="tabs">
+    ${[['brief','📋 Brief'],['messages','💬 Messages'],['deliverables','✅ Deliverables'],['timeline','🕐 Timeline']].map(([t,l])=>`<button class="tab-btn${DETAIL_TAB===t?' active':''}" onclick="switchTab('${t}')">${l}</button>`).join('')}
+  </div>
+
+  <div class="card" id="tab-content">
+    ${renderTab(r,mkt,admin,chs,hi,s)}
+  </div>`
+}
+
+function renderTab(r,mkt,admin,chs,hi,s){
+  if(DETAIL_TAB==='brief'){
+    const fields=[
+      ['Program',r.program_name],['Type',r.program_type],['Season',r.season],
+      ['Dates',[r.start_date&&fmt(r.start_date),r.end_date&&fmt(r.end_date)].filter(Boolean).join(' → ')||null],
+      ['Time',r.program_time],['Location',r.location],
+      ['Reg. deadline',r.registration_deadline?fmt(r.registration_deadline)+' ('+days(r.registration_deadline)+'d)':null],
+      ['Enrollment goal',r.enrollment_goal?r.enrollment_goal+' participants':null],
+      ['Staff',r.staff_name],['Department',r.department],
+      ['Marketing goal',r.marketing_goal],['Target audience',r.target_who],
+      ['Key message',r.key_message],
+    ].filter(([,v])=>v)
+
+    return`
+    <div class="g2" style="margin-bottom:16px">
+      ${fields.map(([l,v])=>`<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b6966;margin-bottom:3px">${l}</div><div style="font-size:14px">${esc(String(v))}</div></div>`).join('')}
+      ${chs.length?`<div style="grid-column:span 2"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b6966;margin-bottom:6px">Channels</div><div style="display:flex;flex-wrap:wrap;gap:6px">${chs.map(cv=>{const c=CHANNELS.find(x=>x.v===cv);return`<span style="padding:3px 10px;background:#f5f4f0;border-radius:20px;font-size:12px;border:1px solid #e5e3dc">${c?.i||''} ${c?.l||cv}</span>`}).join('')}</div></div>`:'' }
+      ${hi.length?`<div style="grid-column:span 2"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b6966;margin-bottom:6px">Highlights</div>${hi.map(h=>`<div style="font-size:13px;margin-bottom:3px">• ${esc(h)}</div>`).join('')}</div>`:''}
+      ${s>0?`<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b6966;margin-bottom:6px">Priority</div><div style="display:flex;align-items:center;gap:8px">${priBar(s)} ${scoreBadge(s)}</div></div>`:''}
+    </div>
+    ${mkt?`
+    <div style="border-top:1px solid #f0efeb;padding-top:14px">
+      <div class="sec-label">Marketing Notes <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:#9a9893">(visible to staff)</span></div>
+      <textarea id="mkt-notes" style="width:100%;min-height:68px;padding:10px 12px;border:1.5px solid #d9d7d0;border-radius:8px;outline:none;font-size:13px;resize:vertical" placeholder="Add notes…">${esc(r.marketing_notes||'')}</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-sm btn-primary" onclick="saveMktNotes('${r.id}')">Save notes</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;border:1.5px solid #d9d7d0;border-radius:6px;padding:5px 10px;background:#fff">
+          <input type="checkbox" id="clar-chk" ${r.clarification_needed?'checked':''} onchange="toggleClar('${r.id}',this.checked)"> Flag — needs staff info
+        </label>
+        ${r.clarification_needed?`<input id="clar-note" value="${esc(r.clarification_note||'')}" placeholder="What do you need?" style="flex:1;min-width:180px;padding:6px 10px;border:1.5px solid #fde047;border-radius:6px;font-size:13px" onblur="saveClarNote('${r.id}',this.value)">`:''}
+      </div>
+    </div>`:`${r.marketing_notes?`<div style="border-top:1px solid #f0efeb;padding-top:14px"><div class="sec-label">Note from Marketing</div><div style="font-size:14px">${esc(r.marketing_notes)}</div></div>`:''}`}
+    ${!mkt&&r.status==='done'&&!r.feedback_rating?renderFeedback(r):''}`
+  }
+
+  if(DETAIL_TAB==='messages'){
+    const vis=mkt?COMMENTS:COMMENTS.filter(c=>!c.is_internal)
+    return`
+    <div id="comments-list" style="margin-bottom:14px">
+      ${vis.length===0?`<div style="text-align:center;padding:20px;color:#9a9893;font-style:italic;font-size:13px">No messages yet — start the conversation!</div>`:''}
+      ${vis.map(c=>`<div class="comment">
+        <div class="avatar ${avClass(c.author_role)}">${initials(c.author_name)}</div>
+        <div class="comment-bub${c.is_internal?' internal':''}">
+          <div class="comment-meta">
+            <strong>${esc(c.author_name)}</strong>
+            <span class="badge badge-${c.author_role}" style="font-size:10px">${c.author_role}</span>
+            ${c.is_internal?`<span class="badge badge-reviewing" style="font-size:10px">Internal</span>`:''}
+            <span style="margin-left:auto">${fmt(c.created_at)}</span>
+          </div>
+          <div class="comment-body">${esc(c.body)}</div>
+        </div>
+      </div>`).join('')}
+    </div>
+    <div style="border-top:1px solid #f0efeb;padding-top:14px">
+      <textarea id="comment-input" placeholder="Write a message…" style="width:100%;min-height:66px;padding:10px 12px;border:1.5px solid #d9d7d0;border-radius:8px;outline:none;font-size:13px;resize:vertical;margin-bottom:8px"></textarea>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        ${mkt?`<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#6b6966;cursor:pointer"><input type="checkbox" id="internal-chk"> Internal note</label>`:''}
+        <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="sendMsg('${r.id}')">Send →</button>
+      </div>
+    </div>`
+  }
+
+  if(DETAIL_TAB==='deliverables'){
+    const done=DELIVS.filter(d=>d.completed).length
+    return`
+    ${DELIVS.length?`<div style="font-size:12px;color:#6b6966;margin-bottom:10px">${done}/${DELIVS.length} complete</div>`:''}
+    ${DELIVS.map(d=>`<div class="deliv${d.completed?' done-deliv':''}">
+      <input type="checkbox" ${d.completed?'checked':''} ${!mkt?'disabled':''} onchange="toggleDeliv('${d.id}',this.checked)">
+      <span class="deliv-label${d.completed?' crossed':''}">${esc(d.label)}</span>
+      ${d.completed_by?`<span style="font-size:11px;color:#15803d">✓ ${esc(d.completed_by)}</span>`:''}
+      ${d.due_date?`<span style="font-size:11px;color:#6b6966">${fmt(d.due_date)}</span>`:''}
+    </div>`).join('')}
+    ${!DELIVS.length&&!mkt?`<div style="text-align:center;padding:20px;color:#9a9893;font-size:13px;font-style:italic">Marketing will add deliverables here.</div>`:''}
+    ${mkt?`<div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid #f0efeb;padding-top:12px;flex-wrap:wrap">
+      <input id="new-deliv" placeholder="Add deliverable…" style="flex:1;min-width:140px;padding:8px 12px;border:1.5px solid #d9d7d0;border-radius:7px;font-size:13px;outline:none">
+      <input type="date" id="new-deliv-date" style="width:140px;padding:8px 12px;border:1.5px solid #d9d7d0;border-radius:7px;font-size:13px;outline:none">
+      <button class="btn btn-sm btn-primary" onclick="addDeliv('${r.id}')">Add</button>
+    </div>`:''}` 
+  }
+
+  if(DETAIL_TAB==='timeline'){
+    return HISTORY.length===0
+      ?`<div style="text-align:center;padding:20px;color:#9a9893;font-size:13px;font-style:italic">No history yet.</div>`
+      :HISTORY.map((h,i)=>`<div class="tl-item">
+        ${i<HISTORY.length-1?'<div class="tl-line"></div>':''}
+        <div class="tl-dot${i===HISTORY.length-1?' current':''}"></div>
+        <div style="flex:1">
+          <div class="tl-action">${h.new_status?STATUS_LABEL[h.new_status]:'Submitted'}</div>
+          <div class="tl-meta">${esc(h.changed_by_name||'System')} · ${fmt(h.created_at)}${h.note?' · '+esc(h.note):''}</div>
+        </div>
+      </div>`).join('')
+  }
+  return ''
+}
+
+function renderFeedback(r){
+  return`<div style="border-top:1px solid #f0efeb;padding-top:16px;margin-top:4px">
+    <div class="sec-label" style="margin-bottom:10px">Rate this campaign</div>
+    <div style="display:flex;gap:6px;margin-bottom:10px" id="stars">
+      ${[1,2,3,4,5].map(n=>`<button style="font-size:24px;background:none;border:none;cursor:pointer;opacity:${FEEDBACK_RATING>=n?1:.3}" onclick="FEEDBACK_RATING=${n};updateStars()">${'⭐'}</button>`).join('')}
+    </div>
+    <textarea id="fb-note" placeholder="How did it go? (optional)" style="width:100%;min-height:60px;padding:10px 12px;border:1.5px solid #d9d7d0;border-radius:8px;font-size:13px;outline:none;margin-bottom:8px;resize:vertical"></textarea>
+    <button class="btn btn-primary btn-sm" onclick="submitFeedback('${r.id}')">Submit Feedback</button>
+  </div>`
+}
+
+function updateStars(){
+  const stars=q('stars')
+  if(!stars)return
+  stars.querySelectorAll('button').forEach((btn,i)=>btn.style.opacity=FEEDBACK_RATING>=i+1?1:.3)
+}
+
+// ─── QUEUE ─────────────────────────────────────────────────────
+function renderQueue(){
+  const reqs=ALL_REQS.filter(r=>!r.is_archived)
+  const byS={}
+  STATUSES.forEach(s=>byS[s]=reqs.filter(r=>r.status===s).sort((a,b)=>(b.priority_score||0)-(a.priority_score||0)))
+  return`
+  <div class="sec-head"><div class="sec-title">Marketing Queue</div></div>
+  <div class="g4" style="margin-bottom:20px">
+    ${STATUSES.map(s=>`<div class="stat"><div class="stat-label">${STATUS_LABEL[s]}</div><div class="stat-value">${byS[s].length}</div></div>`).join('')}
+  </div>
+  <div class="kanban">
+    ${STATUSES.map(s=>`<div class="k-col">
+      <div class="k-col-head">
+        <span class="k-col-label">${STATUS_LABEL[s]}</span>
+        <span class="k-count">${byS[s].length}</span>
+      </div>
+      ${byS[s].length===0?`<div style="border:1px dashed #d9d7d0;border-radius:7px;padding:14px;text-align:center;font-size:12px;color:#9a9893">Empty</div>`:''}
+      ${byS[s].map(r=>{
+        const sc=r.priority_score||0
+        const d=days(r.registration_deadline)
+        return`<div class="k-card" onclick="openDetail('${r.id}')">
+          <div style="height:3px;background:${scoreColor(sc)};margin:-12px -13px 10px;border-radius:7px 7px 0 0"></div>
+          <div class="k-card-title">${esc(r.program_name)}${r.clarification_needed?`<span class="badge badge-reviewing" style="font-size:10px;margin-left:5px">Needs info</span>`:''}</div>
+          <div class="k-card-meta">${esc(r.staff_name||'')} · ${esc(r.department||'')}</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            ${sc>0?`<span class="badge ${sc>=70?'badge-high':sc>=40?'badge-medium':'badge-low'}" style="font-size:10px">${sc}</span>`:''}
+            ${d!==null&&d<=14?`<span class="badge ${d<0||d<7?'badge-high':'badge-reviewing'}" style="font-size:10px">${d<0?'Overdue':d+'d'}</span>`:''}
+          </div>
+        </div>`
+      }).join('')}
+    </div>`).join('')}
+  </div>`
+}
+
+// ─── WORKLOAD ──────────────────────────────────────────────────
+function renderWorkload(){
+  const active=ALL_REQS.filter(r=>r.status!=='done'&&!r.is_archived)
+  const bp={}
+  active.forEach(r=>{const n=r.assigned_to_name||'Unassigned';if(!bp[n])bp[n]=[];bp[n].push(r)})
+  return`
+  <div class="sec-head"><div class="sec-title">Workload</div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+    ${Object.entries(bp).map(([name,rs])=>`<div class="card">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+        <div class="avatar av-marketing">${initials(name)}</div>
+        <div><div style="font-size:14px;font-weight:600">${esc(name)}</div><div style="font-size:12px;color:#6b6966">${rs.length} active</div></div>
+      </div>
+      ${rs.map(r=>`<div style="font-size:12px;padding:6px 9px;background:#f5f4f0;border-radius:6px;margin-bottom:5px;cursor:pointer" onclick="openDetail('${r.id}')">
+        <div style="font-weight:600;margin-bottom:2px">${esc(r.program_name)}</div>
+        <span class="badge ${STATUS_BADGE[r.status]}" style="font-size:10px">${STATUS_LABEL[r.status]}</span>
+      </div>`).join('')}
+    </div>`).join('')}
+  </div>`
+}
+
+// ─── CALENDAR ──────────────────────────────────────────────────
+function renderCalendar(){
+  const items=ALL_REQS.filter(r=>!r.is_archived&&(r.registration_deadline||r.start_date))
+    .map(r=>({...r,d:r.registration_deadline||r.start_date}))
+    .sort((a,b)=>new Date(a.d)-new Date(b.d)).slice(0,30)
+  return`
+  <div class="sec-head"><div class="sec-title">Calendar</div><div class="sec-sub">Upcoming deadlines and start dates</div></div>
+  ${items.length===0?`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">No upcoming dates</div></div>`:''}
+  ${items.map(r=>{
+    const n=days(r.d),dt=new Date(r.d)
+    return`<div style="display:flex;align-items:center;gap:14px;padding:12px 16px;background:#fff;border:1px solid #e5e3dc;border-radius:10px;margin-bottom:8px;cursor:pointer" onclick="openDetail('${r.id}')">
+      <div style="width:42px;text-align:center;flex-shrink:0">
+        <div style="font-size:20px;font-weight:700;color:${n<0?'#dc2626':n<7?'#dc2626':n<14?'#d97706':'#1c1c1a'};line-height:1">${dt.getDate()}</div>
+        <div style="font-size:10px;color:#6b6966;text-transform:uppercase">${dt.toLocaleString('en-US',{month:'short'})}</div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.program_name)}</div>
+        <div style="font-size:11px;color:#6b6966">${r.registration_deadline?'Reg. deadline':'Start date'} · ${esc(r.staff_name||'')}</div>
+      </div>
+      <span class="badge ${STATUS_BADGE[r.status]}">${STATUS_LABEL[r.status]}</span>
+      ${n!==null?`<span class="badge ${n<0?'badge-high':n<7?'badge-high':n<14?'badge-reviewing':'badge-low'}" style="white-space:nowrap">${n<0?'Overdue':n===0?'Today':n+'d'}</span>`:''}
+    </div>`
+  }).join('')}`
+}
+
+// ─── PERFORMANCE ───────────────────────────────────────────────
+function renderPerformance(){
+  const reqs=ALL_REQS.filter(r=>!r.is_archived)
+  const total=reqs.length,done=reqs.filter(r=>r.status==='done').length
+  const avg=total?Math.round(reqs.reduce((s,r)=>s+(r.priority_score||0),0)/total):0
+  const bd={},bg={},bc={}
+  reqs.forEach(r=>{
+    const dept=r.department||'Unknown';bd[dept]=(bd[dept]||0)+1
+    const goal=r.marketing_goal||'Not set';bg[goal]=(bg[goal]||0)+1
+    ;(r.channels||[]).forEach(c=>{bc[c]=(bc[c]||0)+1})
+  })
+  const topDept=Object.entries(bd).sort((a,b)=>b[1]-a[1]).slice(0,6)
+  const topGoal=Object.entries(bg).sort((a,b)=>b[1]-a[1]).slice(0,5)
+  const topCh=Object.entries(bc).sort((a,b)=>b[1]-a[1]).slice(0,6)
+  return`
+  <div class="sec-head"><div class="sec-title">Performance</div></div>
+  <div class="g4" style="margin-bottom:20px">
+    <div class="stat"><div class="stat-label">Total</div><div class="stat-value">${total}</div></div>
+    <div class="stat"><div class="stat-label">Complete</div><div class="stat-value" style="color:#15803d">${done}</div><div style="font-size:12px;color:#6b6966;margin-top:3px">${total?Math.round(done/total*100):0}%</div></div>
+    <div class="stat"><div class="stat-label">Avg Score</div><div class="stat-value" style="color:#d97706">${avg}</div></div>
+    <div class="stat"><div class="stat-label">Active</div><div class="stat-value" style="color:#2563eb">${reqs.filter(r=>r.status!=='done').length}</div></div>
+  </div>
+  <div class="g3">
+    <div class="card"><div class="sec-label" style="margin-bottom:12px">By Department</div>
+      ${topDept.map(([d,c])=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d)}</span>
+        <div style="width:60px;height:4px;background:#e5e3dc;border-radius:2px;overflow:hidden;flex-shrink:0"><div style="width:${total?Math.round(c/total*100):0}%;height:100%;background:#2563eb"></div></div>
+        <span style="font-size:12px;color:#6b6966;width:18px;text-align:right">${c}</span>
+      </div>`).join('')}
+    </div>
+    <div class="card"><div class="sec-label" style="margin-bottom:12px">By Goal</div>
+      ${topGoal.map(([g,c])=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g)}</span>
+        <div style="width:50px;height:4px;background:#e5e3dc;border-radius:2px;overflow:hidden;flex-shrink:0"><div style="width:${total?Math.round(c/total*100):0}%;height:100%;background:#15803d"></div></div>
+        <span style="font-size:12px;color:#6b6966;width:18px;text-align:right">${c}</span>
+      </div>`).join('')}
+    </div>
+    <div class="card"><div class="sec-label" style="margin-bottom:12px">Top Channels</div>
+      ${topCh.map(([cv,c])=>{const ch=CHANNELS.find(x=>x.v===cv);return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:15px">${ch?.i||'📌'}</span>
+        <span style="font-size:13px;flex:1">${ch?.l||cv}</span>
+        <span style="font-size:12px;color:#6b6966;font-weight:600">${c}</span>
       </div>`}).join('')}
     </div>
   </div>`
 }
 
-// ─────────────────────────────────────────
-// ADMIN
-// ─────────────────────────────────────────
-function renderAdmin(){
-  return`
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <div><h2 style="font-size:20px;font-weight:700;margin:0">Admin</h2></div>
-    <div class="nav">
-      ${['requests','users','settings'].map(s=>`<button class="nav-btn${state.adminSection===s?' active':''}" onclick="setAdminSection('${s}')">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`).join('')}
-    </div>
-  </div>
-  ${state.adminSection==='requests'?renderAdminRequests():''}
-  ${state.adminSection==='users'?renderAdminUsers():''}
-  ${state.adminSection==='settings'?renderAdminSettings():''}
-  `
+// ─── ADMIN REQUESTS ────────────────────────────────────────────
+function renderAdminReqs(){
+  return`<div class="sec-head"><div class="sec-title">Admin — Requests</div></div>`+renderAllReqs()
 }
 
-function renderAdminRequests(){
-  const reqs=state.requests
+// ─── ADMIN USERS ───────────────────────────────────────────────
+function renderUsers(){
   return`
-  <div class="g4" style="margin-bottom:18px">
-    <div class="stat"><div class="stat-label">All time</div><div class="stat-val">${reqs.length}</div></div>
-    <div class="stat"><div class="stat-label">Active</div><div class="stat-val" style="color:#185FA5">${reqs.filter(r=>r.status!=='done').length}</div></div>
-    <div class="stat"><div class="stat-label">Complete</div><div class="stat-val" style="color:#3B6D11">${reqs.filter(r=>r.status==='done').length}</div></div>
-    <div class="stat"><div class="stat-label">High priority</div><div class="stat-val" style="color:#E24B4A">${reqs.filter(r=>(r.priority_score||0)>=70&&r.status!=='done').length}</div></div>
+  <div class="sec-head">
+    <div><div class="sec-title">Users</div><div class="sec-sub">${USERS_LIST.length} total</div></div>
+    <button class="btn btn-primary" onclick="openAddUser()">+ Add User</button>
   </div>
-  <div class="card" style="overflow-x:auto">
-    <table class="data-table">
-      <thead><tr>${['#','Program','Staff','Dept','Goal','Score','Status','Submitted'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Dept</th><th>Last seen</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
-        ${reqs.map(r=>`<tr>
-          <td style="color:#888780">${r.request_number||''}</td>
-          <td style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.program_name}</td>
-          <td style="color:#5f5e5a">${r.staff_name||''}</td>
-          <td style="color:#888780">${r.department||'—'}</td>
-          <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#5f5e5a">${r.marketing_goal||'—'}</td>
-          <td style="font-weight:600;color:${priColor(r.priority_score||0)}">${r.priority_score||0}</td>
-          <td><select onchange="updateStatus('${r.id}',this.value)" style="border:none;background:transparent;font-size:12px;cursor:pointer">${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}"${r.status===v?' selected':''}>${l}</option>`).join('')}</select></td>
-          <td style="color:#888780;font-size:12px">${fmtDate(r.created_at)}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>
-  </div>`
-}
-
-function renderAdminUsers(){
-  return`
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-    <div style="font-size:13px;color:#888780">${state.users.length} users</div>
-    <button class="btn btn-submit btn-sm" onclick="showInviteForm()">+ Invite user</button>
-  </div>
-  <div id="invite-form-wrap"></div>
-  <div class="card" style="overflow-x:auto">
-    <table class="data-table">
-      <thead><tr>${['Name','Email','Role','Department','Last seen','Status'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-      <tbody>
-        ${state.users.map(u=>`<tr>
-          <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">${initials(u.full_name)}</div><span style="font-weight:600">${u.full_name}</span></div></td>
-          <td style="color:#5f5e5a">${u.email}</td>
+        ${USERS_LIST.length===0?`<tr><td colspan="7" style="text-align:center;padding:24px;color:#9a9893;font-style:italic">No users yet.</td></tr>`:''}
+        ${USERS_LIST.map(u=>`<tr>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar ${avClass(u.role)}">${initials(u.full_name)}</div><span style="font-weight:600;font-size:13px">${esc(u.full_name)}</span></div></td>
+          <td style="font-size:13px">${esc(u.email)}</td>
           <td><span class="badge badge-${u.role}">${u.role}</span></td>
-          <td style="color:#888780">${u.department||'—'}</td>
-          <td style="font-size:12px;color:#888780">${u.last_seen_at?fmtDate(u.last_seen_at):'Never'}</td>
-          <td><span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;background:${u.is_active?'#EAF3DE':'#f0ede6'};color:${u.is_active?'#3B6D11':'#888780'}">${u.is_active?'Active':'Inactive'}</span></td>
+          <td style="font-size:12px;color:#6b6966">${esc(u.department||'—')}</td>
+          <td style="font-size:12px;color:#6b6966">${u.last_seen_at?fmt(u.last_seen_at):'Never'}</td>
+          <td><span style="font-size:11px;padding:3px 9px;border-radius:20px;font-weight:700;background:${u.is_active?'#dcfce7':'#f3f4f6'};color:${u.is_active?'#15803d':'#6b7280'}">${u.is_active?'Active':'Inactive'}</span></td>
+          <td>
+            <div style="display:flex;gap:4px">
+              <button class="btn btn-xs" onclick="openEditUser('${u.id}')">✏️ Edit</button>
+              <button class="btn btn-xs ${u.is_active?'btn-yellow':'btn-green'}" onclick="toggleUserActive('${u.id}',${!u.is_active})">${u.is_active?'Deactivate':'Activate'}</button>
+            </div>
+          </td>
         </tr>`).join('')}
       </tbody>
     </table>
   </div>`
 }
 
-function renderAdminSettings(){
-  return`
-  <div class="card">
-    <div class="card-title">Lead time thresholds</div>
-    <div style="font-size:13px;color:#5f5e5a;margin-bottom:8px">Standard lead time: <strong>21 days</strong> · Rush threshold: <strong>7 days</strong></div>
-    <div style="font-size:12px;color:#aaa9a2">To change these values, update the mkt_settings table in Supabase → Table Editor.</div>
-  </div>
-  <div class="card">
-    <div class="card-title">Departments</div>
-    <div style="font-size:13px;color:#5f5e5a">${DEPARTMENTS.join(', ')}</div>
+// ─── MODALS ────────────────────────────────────────────────────
+function closeModal(id){const m=q(id);if(m){m.innerHTML='';m.classList.remove('open')}}
+
+function openEditModal(id){
+  const r=getReq(id);if(!r)return
+  const chs=Array.isArray(r.channels)?r.channels:[]
+  const m=q('modal-edit')
+  m.innerHTML=`<div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Edit Request</div>
+        <div style="font-size:12px;color:#6b6966">#${r.request_number||''} · ${esc(r.program_name)}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-edit')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="g2">
+        <div class="field"><label>Program name ✱</label><input id="e-name" value="${esc(r.program_name)}"></div>
+        <div class="field"><label>Type</label><input id="e-type" value="${esc(r.program_type||'')}"></div>
+        <div class="field"><label>Start date</label><input type="date" id="e-start" value="${r.start_date||''}"></div>
+        <div class="field"><label>End date</label><input type="date" id="e-end" value="${r.end_date||''}"></div>
+        <div class="field"><label>Location</label><input id="e-loc" value="${esc(r.location||'')}"></div>
+        <div class="field"><label>Reg. deadline</label><input type="date" id="e-deadline" value="${r.registration_deadline||''}"></div>
+        <div class="field"><label>Staff name</label><input id="e-staff" value="${esc(r.staff_name||'')}"></div>
+        <div class="field"><label>Department</label><select id="e-dept"><option value="">Select…</option>${DEPTS.map(d=>`<option${r.department===d?' selected':''}>${d}</option>`).join('')}</select></div>
+        <div class="field"><label>Season</label><select id="e-season"><option value="">Select…</option>${SEASONS.map(s=>`<option${r.season===s?' selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="field"><label>Enrollment goal</label><input type="number" id="e-enroll" value="${r.enrollment_goal||''}"></div>
+        <div class="field"><label>Marketing goal</label><select id="e-goal"><option value="">Select…</option>${GOALS.map(g=>`<option${r.marketing_goal===g.v?' selected':''}>${g.v}</option>`).join('')}</select></div>
+        <div class="field"><label>Status</label><select id="e-status">${STATUSES.map(v=>`<option value="${v}"${r.status===v?' selected':''}>${STATUS_LABEL[v]}</option>`).join('')}</select></div>
+        <div class="field"><label>Assigned to</label><input id="e-assigned" value="${esc(r.assigned_to_name||'')}"></div>
+      </div>
+      <div class="field"><label>Key message</label><textarea id="e-msg" style="min-height:58px">${esc(r.key_message||'')}</textarea></div>
+      <div class="field"><label>Marketing notes (visible to staff)</label><textarea id="e-mkt-notes" style="min-height:58px">${esc(r.marketing_notes||'')}</textarea></div>
+      <div class="field"><label>Internal notes</label><textarea id="e-notes" style="min-height:58px">${esc(r.notes||'')}</textarea></div>
+      <div class="sec-label" style="margin-bottom:10px">Channels</div>
+      <div class="channel-grid" id="e-channels">
+        ${CHANNELS.map(ch=>`<div class="chip${chs.includes(ch.v)?' on':''}" onclick="this.classList.toggle('on')"><span>${ch.i}</span>${ch.l}</div>`).join('')}
+      </div>
+    </div>
+    <div class="modal-footer modal-footer-split">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-xs btn-red" onclick="deleteReq('${r.id}');closeModal('modal-edit')">🗑 Delete</button>
+        ${r.is_archived?`<button class="btn btn-xs btn-green" onclick="unarchiveReq('${r.id}');closeModal('modal-edit')">📤 Restore</button>`:`<button class="btn btn-xs" onclick="archiveReq('${r.id}');closeModal('modal-edit')">📦 Archive</button>`}
+        ${r.status==='done'?`<button class="btn btn-xs btn-yellow" onclick="reopenReq('${r.id}');closeModal('modal-edit')">↩ Reopen</button>`:''}
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeModal('modal-edit')">Cancel</button>
+        <button id="save-edit-btn" class="btn btn-primary" onclick="saveEdit('${r.id}')">Save Changes</button>
+      </div>
+    </div>
   </div>`
+  m.classList.add('open')
+  m.addEventListener('click',e=>{if(e.target===m)closeModal('modal-edit')})
 }
 
-// ─────────────────────────────────────────
-// EVENT HANDLERS (global functions)
-// ─────────────────────────────────────────
-window.setView=setView
-window.setAdminSection=s=>{state.adminSection=s;if(s==='users')loadUsers();render()}
-window.openDetail=async id=>{
-  state.selectedReq=state.requests.find(r=>r.id===id)||null
-  state.view='detail';state.detailTab='brief'
-  if(state.selectedReq){
-    await Promise.all([loadComments(id),loadDeliverables(id),loadHistory(id)])
+async function saveEdit(id){
+  const name=q('e-name')?.value?.trim()
+  if(!name){toast('Program name required','err');return}
+  setLoading('save-edit-btn',true)
+
+  const selectedChs=[...document.querySelectorAll('#e-channels .chip.on')]
+    .map(el=>CHANNELS.find(ch=>el.textContent.trim().includes(ch.l))?.v)
+    .filter(Boolean)
+
+  const newStatus=q('e-status')?.value||'new'
+  const extra={}
+  const req=getReq(id)
+  if(newStatus==='done'&&req?.status!=='done') extra.completed_at=new Date().toISOString()
+  if(newStatus==='active'&&req?.status!=='active'){extra.approved_at=new Date().toISOString();extra.approved_by=USER.full_name}
+
+  const fields={
+    program_name:name,
+    program_type:q('e-type')?.value||null,
+    start_date:q('e-start')?.value||null,
+    end_date:q('e-end')?.value||null,
+    location:q('e-loc')?.value||null,
+    registration_deadline:q('e-deadline')?.value||null,
+    staff_name:q('e-staff')?.value||null,
+    department:q('e-dept')?.value||null,
+    season:q('e-season')?.value||null,
+    enrollment_goal:q('e-enroll')?.value?parseInt(q('e-enroll').value):null,
+    marketing_goal:q('e-goal')?.value||null,
+    status:newStatus,
+    assigned_to_name:q('e-assigned')?.value||null,
+    key_message:q('e-msg')?.value||null,
+    marketing_notes:q('e-mkt-notes')?.value||null,
+    notes:q('e-notes')?.value||null,
+    channels:selectedChs,
+    ...extra,
   }
-  render()
+
+  const {error}=await SB.from('marketing_requests').update(fields).eq('id',id)
+  setLoading('save-edit-btn',false)
+  if(error){toast('Error: '+error.message,'err');return}
+
+  if(req?.status!==newStatus){
+    SB.from('mkt_status_history').insert([{request_id:id,changed_by_name:USER.full_name,changed_by_role:'admin',old_status:req?.status,new_status:newStatus,note:'Edited by admin'}])
+  }
+  Object.assign(req,fields)
+  closeModal('modal-edit')
+  toast('Changes saved ✓')
+  renderView()
 }
-window.setDetailTab=t=>{state.detailTab=t;render()}
-window.setForm=(k,v)=>{state.form[k]=v;render()}
-window.setHighlight=(i,v)=>{state.form.highlights[i]=v}
-window.addHighlight=()=>{state.form.highlights.push('');render()}
-window.toggleChannel=v=>{
-  const chs=state.form.channels||[]
-  state.form.channels=chs.includes(v)?chs.filter(c=>c!==v):[...chs,v]
-  render()
+
+function openAddUser(){
+  const m=q('modal-user')
+  m.innerHTML=`<div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add New User</div>
+      <button class="modal-close" onclick="closeModal('modal-user')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info" style="margin-bottom:14px">ℹ️ After adding, message Claude with their email & temp password to activate their login.</div>
+      <div class="field"><label>Full name ✱</label><input id="u-name" placeholder="Jane Smith"></div>
+      <div class="field"><label>Email ✱</label><input type="email" id="u-email" placeholder="jane@bgparks.org"></div>
+      <div class="g2">
+        <div class="field"><label>Role</label><select id="u-role"><option value="staff">Staff</option><option value="marketing">Marketing</option><option value="admin">Admin</option></select></div>
+        <div class="field"><label>Department</label><select id="u-dept"><option value="">None</option>${DEPTS.map(d=>`<option>${d}</option>`).join('')}</select></div>
+      </div>
+      <div class="field"><label>Temp password ✱</label><input type="text" id="u-pass" placeholder="e.g. Welcome2025!"></div>
+      <div id="u-result"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-user')">Cancel</button>
+      <button id="u-submit-btn" class="btn btn-primary" onclick="createUser()">Create User</button>
+    </div>
+  </div>`
+  m.classList.add('open')
+  m.addEventListener('click',e=>{if(e.target===m)closeModal('modal-user')})
 }
-window.formStep=async n=>{
-  if(n>state.formStep&&state.formStep===4){await submitForm();return}
-  state.formStep=n;render()
+
+function openEditUser(id){
+  const u=USERS_LIST.find(x=>x.id===id);if(!u)return
+  const m=q('modal-user')
+  m.innerHTML=`<div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Edit User</div>
+      <button class="modal-close" onclick="closeModal('modal-user')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label>Full name ✱</label><input id="eu-name" value="${esc(u.full_name)}"></div>
+      <div class="field"><label>Email ✱</label><input type="email" id="eu-email" value="${esc(u.email)}"></div>
+      <div class="g2">
+        <div class="field"><label>Role</label><select id="eu-role">${['staff','marketing','admin'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${r}</option>`).join('')}</select></div>
+        <div class="field"><label>Department</label><select id="eu-dept"><option value="">None</option>${DEPTS.map(d=>`<option${u.department===d?' selected':''}>${d}</option>`).join('')}</select></div>
+      </div>
+      <div class="alert alert-info" style="margin-top:4px">ℹ️ Changing email here updates their profile only. To change their login email, also update it in Supabase → Auth.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-user')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveUser('${id}')">Save Changes</button>
+    </div>
+  </div>`
+  m.classList.add('open')
+  m.addEventListener('click',e=>{if(e.target===m)closeModal('modal-user')})
 }
-window.submitForm=async()=>{
-  if(!state.form.program_name.trim()){
-    document.getElementById('form-err').innerHTML='<div class="alert alert-error">Program name is required.</div>'
+
+async function createUser(){
+  const name=q('u-name')?.value?.trim()
+  const email=q('u-email')?.value?.trim()
+  const role=q('u-role')?.value
+  const dept=q('u-dept')?.value
+  const pass=q('u-pass')?.value?.trim()
+  if(!name){toast('Full name is required','err');return}
+  if(!email){toast('Email is required','err');return}
+  if(!pass){toast('Set a temporary password','err');return}
+  // Validate email format
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('Please enter a valid email address','err');return}
+  setLoading('u-submit-btn',true)
+  const {data,error}=await SB.from('mkt_users').insert([{
+    full_name:name,email:email.toLowerCase(),role:role||'staff',
+    department:dept||null,is_active:true
+  }]).select().single()
+  setLoading('u-submit-btn',false)
+  if(error){
+    const msg=error.message.includes('unique')||error.message.includes('duplicate')
+      ?'A user with this email already exists.'
+      :'Error creating user: '+error.message
+    toast(msg,'err')
+    const res=q('u-result')
+    if(res) res.innerHTML=`<div class="alert alert-error" style="margin-top:10px">⚠️ ${esc(msg)}</div>`
     return
   }
-  const btn=document.getElementById('submit-btn')
-  if(btn)btn.disabled=true
-  const ok=await submitRequest(state.form)
-  if(ok){state.form=blankForm();state.formStep=1;setView('dashboard')}
-  else if(btn)btn.disabled=false
-}
-window.sendComment=async()=>{
-  const body=document.getElementById('comment-body')?.value
-  const internal=document.getElementById('internal-check')?.checked||false
-  if(body){await addComment(body,internal);render()}
-}
-window.saveMktNotes=async()=>{
-  const notes=document.getElementById('mkt-notes')?.value||''
-  await updateRequest(state.selectedReq.id,{marketing_notes:notes})
-  toast('Notes saved')
-}
-window.addDelivFromUI=async()=>{
-  const label=document.getElementById('new-deliv')?.value
-  const date=document.getElementById('new-deliv-date')?.value
-  if(label){await addDeliverable(label,date);render()}
-}
-window.toggleDeliverable=async(id,checked)=>{await toggleDeliverable(id,checked)}
-window.updateStatus=async(id,status)=>{await updateStatus(id,status)}
-window.setFeedbackRating=n=>{state.feedbackRating=n;render()}
-window.submitFeedback=async(id)=>{
-  const note=document.getElementById('feedback-note')?.value||''
-  await updateRequest(id,{feedback_rating:state.feedbackRating,feedback_note:note})
-  toast('Thank you for your feedback!')
-  state.feedbackRating=null
-  render()
-}
-window.showInviteForm=()=>{
-  document.getElementById('invite-form-wrap').innerHTML=`
-  <div class="card" style="margin-bottom:12px">
-    <div class="card-title">Invite new user</div>
-    <p style="font-size:13px;color:#5f5e5a;margin-bottom:12px">Create a user profile. The staff member signs up at the app URL using this email.</p>
-    <div class="g2">
-      <div class="field"><label>Full name</label><input id="inv-name" placeholder="Jane Smith"></div>
-      <div class="field"><label>Email</label><input type="email" id="inv-email" placeholder="jane@bgparks.org"></div>
-      <div class="field"><label>Role</label><select id="inv-role"><option value="staff">Staff</option><option value="marketing">Marketing</option><option value="admin">Admin</option></select></div>
-      <div class="field"><label>Department</label><select id="inv-dept"><option value="">None</option>${DEPARTMENTS.map(d=>`<option>${d}</option>`).join('')}</select></div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn" onclick="document.getElementById('invite-form-wrap').innerHTML=''">Cancel</button>
-      <button class="btn btn-submit" onclick="createUser()">Create user</button>
+  const res=q('u-result')
+  if(res) res.innerHTML=`<div class="alert alert-success" style="margin-top:10px">
+    ✅ <strong>${esc(name)} added successfully!</strong><br>
+    <div style="margin-top:6px;font-size:12px;line-height:1.6">
+      <strong>Next steps:</strong><br>
+      1. Send them the app URL<br>
+      2. Their temporary password: <code style="background:#f0fdf4;padding:2px 6px;border-radius:4px;font-weight:700">${esc(pass)}</code><br>
+      3. Message Claude: "Set up login for ${esc(email)} password ${esc(pass)}" to activate their Supabase login
     </div>
   </div>`
-}
-window.createUser=async()=>{
-  const name=document.getElementById('inv-name')?.value
-  const email=document.getElementById('inv-email')?.value
-  const role=document.getElementById('inv-role')?.value
-  const dept=document.getElementById('inv-dept')?.value
-  if(!name||!email){toast('Name and email are required','error');return}
-  const{error}=await sb.from('mkt_users').insert([{full_name:name,email,role,department:dept||null,avatar_initials:initials(name)}])
-  if(!error){toast('User created');await loadUsers();render()}
-  else toast('Error: '+error.message,'error')
+  await loadUsers()
+  // Don't auto-close — let user read the instructions
 }
 
-function bindCurrentView(){}
+async function saveUser(id){
+  const name=q('eu-name')?.value?.trim()
+  const email=q('eu-email')?.value?.trim()
+  const role=q('eu-role')?.value
+  const dept=q('eu-dept')?.value
+  if(!name||!email){toast('Name and email required','err');return}
+  const {error}=await SB.from('mkt_users').update({full_name:name,email,role,department:dept||null}).eq('id',id)
+  if(error){toast('Error: '+error.message,'err');return}
+  closeModal('modal-user')
+  const u=USERS_LIST.find(x=>x.id===id)
+  if(u) Object.assign(u,{full_name:name,email,role,department:dept||null})
+  renderView(); toast('User updated ✓')
+}
 
-// ─────────────────────────────────────────
-// BOOT
-// ─────────────────────────────────────────
-init()
+async function toggleUserActive(id,active){
+  await SB.from('mkt_users').update({is_active:active}).eq('id',id)
+  const u=USERS_LIST.find(x=>x.id===id);if(u)u.is_active=active
+  renderView(); toast(active?'User activated':'User deactivated')
+}
+
+// ─── DETAIL ACTIONS ────────────────────────────────────────────
+async function openDetail(id){
+  SEL_ID=id; DETAIL_TAB='brief'
+  if(!getReq(id)){
+    const {data}=await SB.from('marketing_requests').select('*').eq('id',id).single()
+    if(data) ALL_REQS.push(data)
+  }
+  await loadDetail(id)
+  VIEW='detail'; showApp()
+}
+
+function backFromDetail(){
+  SEL_ID=null
+  navTo('requests')
+}
+
+function switchTab(t){
+  DETAIL_TAB=t
+  const r=getReq(SEL_ID);if(!r)return
+  const mkt=isMkt(),admin=isAdmin()
+  const chs=Array.isArray(r.channels)?r.channels:[]
+  const hi=Array.isArray(r.highlights)?r.highlights:typeof r.highlights==='string'?r.highlights.split('\n').filter(Boolean):[]
+  const s=r.priority_score||0
+  q('tab-content').innerHTML=renderTab(r,mkt,admin,chs,hi,s)
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.classList.toggle('active',btn.textContent.toLowerCase().includes(t.substring(0,4)))
+  })
+  // fix active tab highlight properly
+  document.querySelectorAll('.tab-btn').forEach(btn=>btn.classList.remove('active'))
+  const tabMap={brief:'📋',messages:'💬',deliverables:'✅',timeline:'🕐'}
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    if(btn.textContent.startsWith(tabMap[t])) btn.classList.add('active')
+  })
+}
+
+async function detailChangeStatus(id,status){
+  await changeStatus(id,status)
+  const r=getReq(id)
+  if(r){
+    await loadDetail(id)
+    VIEW='detail'; showApp()
+  }
+}
+
+async function saveMktNotes(id){
+  const notes=q('mkt-notes')?.value||''
+  const {error}=await SB.from('marketing_requests').update({marketing_notes:notes}).eq('id',id)
+  if(error){toast('Error saving','err');return}
+  const r=getReq(id);if(r)r.marketing_notes=notes
+  toast('Notes saved')
+}
+
+async function toggleClar(id,checked){
+  await SB.from('marketing_requests').update({clarification_needed:checked}).eq('id',id)
+  const r=getReq(id);if(r)r.clarification_needed=checked
+  await loadDetail(id)
+  VIEW='detail'; showApp()
+}
+
+async function saveClarNote(id,note){
+  await SB.from('marketing_requests').update({clarification_note:note}).eq('id',id)
+  const r=getReq(id);if(r)r.clarification_note=note
+}
+
+async function sendMsg(id){
+  const body=q('comment-input')?.value?.trim()
+  const internal=q('internal-chk')?.checked||false
+  if(!body){toast('Please write a message','err');return}
+  const {error}=await SB.from('mkt_comments').insert([{request_id:id,author_name:USER.full_name,author_role:USER.role,body,is_internal:internal}])
+  if(error){toast('Error sending','err');return}
+  await loadDetail(id)
+  switchTab('messages')
+  toast('Message sent')
+}
+
+async function toggleDeliv(id,checked){
+  await SB.from('mkt_deliverables').update({completed:checked,completed_at:checked?new Date().toISOString():null,completed_by:checked?USER.full_name:null}).eq('id',id)
+  await loadDetail(SEL_ID)
+  switchTab('deliverables')
+}
+
+async function addDeliv(reqId){
+  const label=q('new-deliv')?.value?.trim()
+  const date=q('new-deliv-date')?.value
+  if(!label){toast('Enter a deliverable','err');return}
+  await SB.from('mkt_deliverables').insert([{request_id:reqId,label,due_date:date||null,sort_order:DELIVS.length}])
+  await loadDetail(reqId)
+  switchTab('deliverables')
+}
+
+async function submitFeedback(id){
+  if(!FEEDBACK_RATING){toast('Please select a rating','err');return}
+  const note=q('fb-note')?.value||''
+  await SB.from('marketing_requests').update({feedback_rating:FEEDBACK_RATING,feedback_note:note}).eq('id',id)
+  const r=getReq(id);if(r){r.feedback_rating=FEEDBACK_RATING;r.feedback_note=note}
+  FEEDBACK_RATING=0
+  toast('Feedback submitted — thank you!')
+  switchTab('brief')
+}
+
+// ─── ADMIN ACTIONS ──────────────────────────────────────────────
+async function quickStatus(id,status){
+  await changeStatus(id,status,'Admin status change')
+  renderView()
+}
+
+async function reopenReq(id){
+  if(!confirm('Reopen this request?'))return
+  const r=getReq(id)
+  await SB.from('marketing_requests').update({status:'active',completed_at:null}).eq('id',id)
+  SB.from('mkt_status_history').insert([{request_id:id,changed_by_name:USER.full_name,changed_by_role:'admin',old_status:r?.status,new_status:'active',note:'Reopened by admin'}])
+  if(r){r.status='active';r.completed_at=null}
+  toast('Request reopened'); renderView()
+}
+
+async function archiveReq(id){
+  if(!confirm('Archive this request?'))return
+  await SB.from('marketing_requests').update({is_archived:true}).eq('id',id)
+  const r=getReq(id);if(r)r.is_archived=true
+  toast('Archived'); renderView()
+  if(VIEW==='detail') backFromDetail()
+}
+
+async function unarchiveReq(id){
+  await SB.from('marketing_requests').update({is_archived:false}).eq('id',id)
+  const r=getReq(id);if(r)r.is_archived=false
+  toast('Restored from archive'); renderView()
+}
+
+async function deleteReq(id){
+  const r=getReq(id)
+  if(!confirm('Permanently delete "'+( r?.program_name||'this request')+'"? Cannot be undone.'))return
+  await SB.from('mkt_comments').delete().eq('request_id',id)
+  await SB.from('mkt_deliverables').delete().eq('request_id',id)
+  await SB.from('mkt_status_history').delete().eq('request_id',id)
+  await SB.from('mkt_notifications').delete().eq('request_id',id)
+  await SB.from('marketing_requests').delete().eq('id',id)
+  ALL_REQS=ALL_REQS.filter(x=>x.id!==id)
+  toast('Deleted permanently'); renderView()
+  if(VIEW==='detail'){SEL_ID=null;navTo('requests')}
+}
+
+function selToggle(id,checked){if(checked)SELECTED.add(id);else SELECTED.delete(id);renderView()}
+function selAll(checked,ids){SELECTED=checked?new Set(ids):new Set();renderView()}
+
+async function bulkStatus(status){
+  const ids=[...SELECTED];if(!ids.length)return
+  for(const id of ids) await changeStatus(id,status,'Bulk admin update')
+  SELECTED=new Set(); renderView(); toast(ids.length+' updated')
+}
+async function bulkArchive(){
+  const ids=[...SELECTED];if(!ids.length||!confirm('Archive '+ids.length+' requests?'))return
+  for(const id of ids){await SB.from('marketing_requests').update({is_archived:true}).eq('id',id);const r=getReq(id);if(r)r.is_archived=true}
+  SELECTED=new Set(); renderView(); toast(ids.length+' archived')
+}
+async function bulkDelete(){
+  const ids=[...SELECTED];if(!ids.length||!confirm('Permanently delete '+ids.length+' requests?'))return
+  for(const id of ids){
+    await SB.from('mkt_comments').delete().eq('request_id',id)
+    await SB.from('mkt_deliverables').delete().eq('request_id',id)
+    await SB.from('mkt_status_history').delete().eq('request_id',id)
+    await SB.from('mkt_notifications').delete().eq('request_id',id)
+    await SB.from('marketing_requests').delete().eq('id',id)
+  }
+  ALL_REQS=ALL_REQS.filter(r=>!ids.includes(r.id))
+  SELECTED=new Set(); renderView(); toast(ids.length+' deleted')
+}
+
+// ─── BIND ───────────────────────────────────────────────────────
+function bindView(){
+  // Close modals on background click - already handled per modal
+}
+
+// ─── BOOT ───────────────────────────────────────────────────────
+boot()
 </script>
 </body>
 </html>
