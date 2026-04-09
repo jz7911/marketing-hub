@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BGPD Marketing Hub</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#1a1a18;font-size:15px;line-height:1.5}
+input,textarea,select,button{font-family:inherit;font-size:14px}
+input[type=text],input[type=number],input[type=date],input[type=email],input[type=password],textarea,select{width:100%;padding:8px 10px;border:1px solid #dddbd3;border-radius:7px;background:#fff;color:#1a1a18;outline:none;box-sizing:border-box}
+input:focus,textarea:focus,select:focus{border-color:#888780}
+textarea{resize:vertical;min-height:68px}
+button{cursor:pointer}
+.hidden{display:none!important}
+/* Layout */
+header{background:#fff;border-bottom:1px solid #e5e3db;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:100}
+main{max-width:960px;margin:0 auto;padding:28px 20px}
+/* Cards */
+.card{background:#fff;border:1px solid #e5e3db;border-radius:12px;padding:18px 20px;margin-bottom:12px}
+.card-title{font-size:11px;font-weight:600;letter-spacing:.06em;color:#888780;text-transform:uppercase;margin-bottom:14px}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:13px;color:#5f5e5a;margin-bottom:4px}
+.tip{font-size:11px;color:#aaa9a2;margin-top:3px;font-style:italic}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+/* Buttons */
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;border:1px solid #dddbd3;background:transparent;color:#1a1a18;cursor:pointer;transition:all .15s}
+.btn:hover{background:#f0ede6}
+.btn-primary{background:#f0ede6;border-color:#ccc9c0}
+.btn-submit{background:#1a1a18;color:#fff;border-color:transparent}
+.btn-submit:hover{opacity:.85;background:#1a1a18}
+.btn-success{background:#EAF3DE;border-color:#97C459;color:#3B6D11}
+.btn-danger{background:#FCEBEB;border-color:#f09595;color:#A32D2D}
+.btn-info{background:#E6F1FB;border-color:#85B7EB;color:#185FA5}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+/* Badges */
+.badge{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;display:inline-block;white-space:nowrap}
+.badge-new{background:#E6F1FB;color:#185FA5}
+.badge-reviewing{background:#FAEEDA;color:#854F0B}
+.badge-active{background:#EAF3DE;color:#3B6D11}
+.badge-done{background:#f0ede6;color:#5f5e5a}
+.badge-high{background:#FCEBEB;color:#A32D2D}
+.badge-medium{background:#FAEEDA;color:#854F0B}
+.badge-standard{background:#EAF3DE;color:#3B6D11}
+.badge-staff{background:#EAF3DE;color:#3B6D11}
+.badge-marketing{background:#E6F1FB;color:#185FA5}
+.badge-admin{background:#FAEEDA;color:#854F0B}
+/* Stat cards */
+.stat{background:#f5f4f0;border-radius:10px;padding:14px 16px}
+.stat-label{font-size:11px;color:#888780;margin-bottom:4px}
+.stat-val{font-size:26px;font-weight:600}
+/* Goal grid */
+.goal-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.goal-opt{border:1px solid #dddbd3;border-radius:8px;padding:10px 12px;cursor:pointer;transition:all .15s}
+.goal-opt:hover{border-color:#888780}
+.goal-opt.selected{border-color:#378ADD;background:#E6F1FB}
+.goal-name{font-size:13px;font-weight:600;color:#1a1a18;margin-bottom:2px}
+.goal-desc{font-size:11px;color:#888780}
+.goal-opt.selected .goal-name{color:#185FA5}
+.goal-opt.selected .goal-desc{color:#378ADD}
+/* Channels */
+.channel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.chip{border:1px solid #dddbd3;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px;color:#5f5e5a;display:flex;align-items:center;gap:7px;transition:all .15s}
+.chip:hover{border-color:#888780}
+.chip.selected{border-color:#1D9E75;background:#E1F5EE;color:#0F6E56}
+/* Priority */
+.pri-bar-wrap{background:#f5f4f0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;margin-top:12px}
+.pri-track{flex:1;height:5px;background:#e5e3db;border-radius:3px;overflow:hidden}
+.pri-fill{height:100%;border-radius:3px;transition:width .3s,background .3s}
+/* Tabs */
+.tabs{display:flex;gap:2px;border-bottom:1px solid #e5e3db;margin-bottom:16px}
+.tab-btn{padding:8px 16px;background:none;border:none;cursor:pointer;font-size:13px;color:#888780;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab-btn.active{color:#1a1a18;font-weight:600;border-bottom-color:#1a1a18}
+/* Kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start}
+.kcard{background:#fff;border:1px solid #e5e3db;border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.kcard:hover{border-color:#888780}
+/* Comment thread */
+.comment{display:flex;gap:10px;padding:10px 12px;border-radius:8px;background:#f5f4f0;margin-bottom:8px}
+.avatar{width:28px;height:28px;border-radius:50%;background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#185FA5;flex-shrink:0}
+/* Alert */
+.alert{border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:12px}
+.alert-error{background:#FCEBEB;color:#A32D2D}
+.alert-success{background:#EAF3DE;color:#3B6D11}
+.alert-warn{background:#FAEEDA;color:#854F0B}
+/* Step dots */
+.step-dots{display:flex;gap:5px}
+.dot{height:4px;border-radius:2px;background:#e5e3db;transition:all .2s}
+.dot.active{background:#1a1a18;width:24px}
+.dot.done{background:#5f5e5a;width:8px}
+.dot.pending{width:8px}
+/* Nav */
+.nav{display:flex;gap:2px}
+.nav-btn{padding:7px 14px;font-size:13px;border-radius:7px;border:none;cursor:pointer;background:transparent;color:#888780}
+.nav-btn:hover{background:#f0ede6;color:#1a1a18}
+.nav-btn.active{background:#f0ede6;color:#1a1a18;font-weight:600}
+/* Toast */
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:10px 16px;border-radius:8px;font-size:13px;font-weight:500;background:#1a1a18;color:#fff}
+.toast.error{background:#A32D2D}
+/* Tri buttons */
+.tri-opts{display:flex;gap:6px}
+.tri-btn{padding:5px 14px;font-size:12px;border-radius:7px;border:1px solid #e5e3db;background:#fff;color:#888780;cursor:pointer}
+.tri-btn.active{background:#f0ede6;border-color:#ccc9c0;color:#1a1a18;font-weight:600}
+/* Empty state */
+.empty{text-align:center;padding:3rem 1rem}
+.empty-icon{font-size:36px;margin-bottom:12px}
+/* Dashed add button */
+.add-btn{width:100%;padding:7px;border:1px dashed #dddbd3;border-radius:8px;background:none;color:#888780;cursor:pointer;font-family:inherit;font-size:13px;margin-top:6px}
+.add-btn:hover{border-color:#888780;color:#1a1a18}
+/* Table */
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{padding:9px 12px;font-size:11px;font-weight:600;color:#888780;text-transform:uppercase;letter-spacing:.04em;text-align:left;background:#f5f4f0}
+.data-table td{padding:10px 12px;border-top:1px solid #f0ede6}
+/* Login */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f4f0}
+.login-box{width:100%;max-width:400px;padding:0 20px}
+.login-card{background:#fff;border-radius:14px;border:1px solid #e5e3db;padding:28px 24px}
+</style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+<div id="app"></div>
+
+<script>
+// ─────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────
+const SUPABASE_URL = 'https://bwhjbxphhfjxfaqhtlay.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3aGpieHBoaGZqeGZhcWh0bGF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NjkyMjMsImV4cCI6MjA5MTI0NTIyM30.MOF7y4G7ZuIx8oTRO9TEEwyRy2zZl1pMk2dpdFvUtDw'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ─────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────
+let state = {
+  session: null, mktUser: null, view: 'queue',
+  requests: [], comments: [], deliverables: [],
+  selectedReq: null, detailTab: 'brief',
+  formStep: 1, form: blankForm(),
+  adminSection: 'requests', users: [],
+  mktView: 'queue', statusHistory: []
+}
+
+function blankForm() {
+  return {
+    program_name:'', program_type:'', start_date:'', end_date:'',
+    program_time:'', location:'', registration_deadline:'', enrollment_goal:'',
+    marketing_goal:'', urgency_level:'', impact_level:'', reach_level:'',
+    target_age:'', target_who:'', surface_reason:'', deeper_reason:'',
+    barriers:'', barrier_reduction:'', key_message:'', standout:'',
+    highlights:['','',''], post_for:'', post_why:'', post_cta:'',
+    success_metrics:[{type:'Registration count',target:''}],
+    channels:[], channel_dates:[],
+    photos_supplied:false, photos_by_marketing:false,
+    video_needed:false, graphics_existing:false, graphics_new:false,
+    partners:'', fun_fact:'', notes:'', season:'', department:''
+  }
+}
+
+// ─────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────
+const GOALS = [
+  {value:'Financial sustainability',desc:'Revenue, cost recovery'},
+  {value:'Grow participation',desc:'Enrollment, reduce barriers'},
+  {value:'Fill underutilized space',desc:'Slow days, efficiency'},
+  {value:'Build long-term participation',desc:'Feed future programs'},
+  {value:'Community connection',desc:'Visibility, partnerships'},
+  {value:'Quality & innovation',desc:'Test new concepts'},
+]
+const CHANNELS = [
+  {value:'instagram',label:'Instagram',icon:'📷'},
+  {value:'facebook',label:'Facebook',icon:'👍'},
+  {value:'twitter',label:'X / Twitter',icon:'🐦'},
+  {value:'email',label:'Email blast',icon:'✉️'},
+  {value:'homepage',label:'Homepage slider',icon:'🖥'},
+  {value:'calendar',label:'District calendar',icon:'📅'},
+  {value:'tv',label:'TV screens',icon:'📺'},
+  {value:'flyer',label:'Printed flyer',icon:'📄'},
+  {value:'displaycase',label:'Display case',icon:'🏛'},
+  {value:'community',label:'Community calendars',icon:'🗞'},
+  {value:'partner',label:'Partner outreach',icon:'🤝'},
+  {value:'graphics',label:'New graphics needed',icon:'🎨'},
+]
+const STATUSES = ['new','reviewing','active','done']
+const STATUS_LABELS = {new:'Submitted',reviewing:'Being reviewed',active:'In progress',done:'Complete'}
+const SEASONS = ['Spring 2026','Summer 2026','Fall 2026','Winter 2026','Spring 2027']
+const DEPARTMENTS = ['Recreation','Facilities','Administration','Aquatics','Athletics','Special Events','Clubhouse','Golf']
+
+function calcScore(f) {
+  let s = 0
+  const p = {urgency:{low:5,medium:15,high:30},impact:{low:5,medium:15,high:25},reach:{low:3,medium:8,high:15}}
+  if(f.urgency_level) s += p.urgency[f.urgency_level]||0
+  if(f.impact_level) s += p.impact[f.impact_level]||0
+  if(f.reach_level) s += p.reach[f.reach_level]||0
+  if(f.registration_deadline){const d=(new Date(f.registration_deadline)-new Date())/86400000;if(d<7)s+=20;else if(d<14)s+=12;else if(d<21)s+=6}
+  if(f.marketing_goal==='Financial sustainability'||f.marketing_goal==='Grow participation')s+=10
+  return Math.min(s,100)
+}
+function priLabel(s){return s>=70?'High priority':s>=40?'Medium priority':s>0?'Standard':'Unscored'}
+function priColor(s){return s>=70?'#E24B4A':s>=40?'#BA7517':'#639922'}
+function priBadge(s){return s>=70?'badge-high':s>=40?'badge-medium':'badge-standard'}
+function fmtDate(d){if(!d)return '—';return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+function initials(n){if(!n)return '?';return n.split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2)}
+function daysUntil(d){if(!d)return null;return Math.round((new Date(d)-new Date())/86400000)}
+function toast(msg,type='success'){
+  const el=document.createElement('div')
+  el.className='toast'+(type==='error'?' error':'')
+  el.textContent=msg
+  document.getElementById('toast-container').appendChild(el)
+  setTimeout(()=>el.remove(),3500)
+}
+
+// ─────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────
+async function loadRequests() {
+  let q = sb.from('marketing_requests').select('*').eq('is_archived',false).order('created_at',{ascending:false})
+  if(state.mktUser?.role==='staff') q=q.eq('submitted_by_id',state.mktUser.id)
+  const {data}=await q
+  state.requests=data||[]
+  render()
+}
+async function loadUsers(){const{data}=await sb.from('mkt_users').select('*').order('full_name');state.users=data||[]}
+async function loadComments(reqId){const{data}=await sb.from('mkt_comments').select('*').eq('request_id',reqId).order('created_at',{ascending:true});state.comments=data||[]}
+async function loadDeliverables(reqId){const{data}=await sb.from('mkt_deliverables').select('*').eq('request_id',reqId).order('sort_order',{ascending:true});state.deliverables=data||[]}
+async function loadHistory(reqId){const{data}=await sb.from('mkt_status_history').select('*').eq('request_id',reqId).order('created_at',{ascending:true});state.statusHistory=data||[]}
+
+async function submitRequest(formData) {
+  const score=calcScore(formData)
+  const payload={...formData,priority_score:score,
+    highlights:(formData.highlights||[]).filter(Boolean),
+    success_metrics:(formData.success_metrics||[]).filter(m=>m.target),
+    submitted_by_id:state.mktUser?.id||null,
+    staff_name:state.mktUser?.full_name||formData.staff_name,
+    department:state.mktUser?.department||formData.department||null,
+    status:'new'}
+  const{data,error}=await sb.from('marketing_requests').insert([payload]).select().single()
+  if(!error&&data){
+    await sb.from('mkt_status_history').insert([{request_id:data.id,changed_by_name:payload.staff_name,changed_by_role:'staff',old_status:null,new_status:'new',note:'Request submitted'}])
+    await loadRequests()
+    toast('Request submitted!')
+    return true
+  }
+  toast('Error submitting request','error')
+  return false
+}
+
+async function updateStatus(id,newStatus){
+  const req=state.requests.find(r=>r.id===id)
+  const extra={}
+  if(newStatus==='done')extra.completed_at=new Date().toISOString()
+  if(newStatus==='active'){extra.approved_at=new Date().toISOString();extra.approved_by=state.mktUser?.full_name}
+  await sb.from('marketing_requests').update({status:newStatus,...extra}).eq('id',id)
+  await sb.from('mkt_status_history').insert([{request_id:id,changed_by_name:state.mktUser?.full_name,changed_by_role:state.mktUser?.role,old_status:req?.status,new_status:newStatus}])
+  await loadRequests()
+  if(state.selectedReq?.id===id){state.selectedReq={...state.selectedReq,status:newStatus};await loadHistory(id)}
+  toast('Status updated')
+}
+
+async function updateRequest(id,fields){
+  await sb.from('marketing_requests').update(fields).eq('id',id)
+  await loadRequests()
+  if(state.selectedReq?.id===id)state.selectedReq={...state.selectedReq,...fields}
+}
+
+async function addComment(body,isInternal=false){
+  if(!body.trim())return
+  await sb.from('mkt_comments').insert([{request_id:state.selectedReq.id,author_name:state.mktUser?.full_name||'Staff',author_role:state.mktUser?.role||'staff',body,is_internal:isInternal}])
+  await loadComments(state.selectedReq.id)
+  render()
+}
+
+async function addDeliverable(label,dueDate){
+  await sb.from('mkt_deliverables').insert([{request_id:state.selectedReq.id,label,due_date:dueDate||null,sort_order:state.deliverables.length}])
+  await loadDeliverables(state.selectedReq.id)
+  render()
+}
+
+async function toggleDeliverable(id,completed){
+  await sb.from('mkt_deliverables').update({completed,completed_at:completed?new Date().toISOString():null,completed_by:completed?state.mktUser?.full_name:null}).eq('id',id)
+  await loadDeliverables(state.selectedReq.id)
+  render()
+}
+
+// ─────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────
+async function init(){
+  const{data:{session}}=await sb.auth.getSession()
+  state.session=session
+  if(session)await fetchMktUser(session.user.id)
+  sb.auth.onAuthStateChange(async(_,s)=>{state.session=s;if(s)await fetchMktUser(s.user.id);else{state.mktUser=null;render()}})
+  if(state.mktUser||!session)render()
+}
+
+async function fetchMktUser(authId){
+  const{data}=await sb.from('mkt_users').select('*').eq('auth_user_id',authId).single()
+  state.mktUser=data||null
+  if(data){
+    sb.from('mkt_users').update({last_seen_at:new Date().toISOString()}).eq('id',data.id)
+    await loadRequests()
+  }else render()
+}
+
+async function signIn(email,password){
+  const{error}=await sb.auth.signInWithPassword({email,password})
+  return error
+}
+
+async function signOut(){
+  await sb.auth.signOut()
+  state.mktUser=null;state.session=null;render()
+}
+
+// ─────────────────────────────────────────
+// RENDER ENGINE
+// ─────────────────────────────────────────
+function render(){
+  const app=document.getElementById('app')
+  if(!state.session||!state.mktUser){app.innerHTML=renderLogin();bindLogin();return}
+  app.innerHTML=renderShell()
+  bindShell()
+}
+
+// ─────────────────────────────────────────
+// LOGIN
+// ─────────────────────────────────────────
+function renderLogin(){return`
+<div class="login-wrap">
+  <div class="login-box">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:40px;margin-bottom:10px">🦬</div>
+      <h1 style="font-size:22px;font-weight:700;margin-bottom:4px">BGPD Marketing Hub</h1>
+      <p style="font-size:14px;color:#888780">Sign in to continue</p>
+    </div>
+    <div class="login-card">
+      <div class="field"><label>Email</label><input type="email" id="li-email" placeholder="you@bgparks.org"></div>
+      <div class="field"><label>Password</label><input type="password" id="li-pass" placeholder="••••••••"></div>
+      <div id="li-err"></div>
+      <button id="li-btn" class="btn btn-submit" style="width:100%;margin-top:8px">Sign in</button>
+    </div>
+    <p style="text-align:center;font-size:12px;color:#aaa9a2;margin-top:14px">Contact your admin to get access</p>
+  </div>
+</div>`}
+
+function bindLogin(){
+  document.getElementById('li-btn').onclick=async()=>{
+    const email=document.getElementById('li-email').value
+    const pass=document.getElementById('li-pass').value
+    const err=await signIn(email,pass)
+    if(err)document.getElementById('li-err').innerHTML=`<div class="alert alert-error" style="margin-top:8px">${err.message}</div>`
+  }
+  document.getElementById('li-pass').onkeydown=e=>{if(e.key==='Enter')document.getElementById('li-btn').click()}
+}
+
+// ─────────────────────────────────────────
+// SHELL
+// ─────────────────────────────────────────
+function renderShell(){
+  const u=state.mktUser
+  const role=u.role
+  const roleColors={staff:{bg:'#EAF3DE',color:'#3B6D11'},marketing:{bg:'#E6F1FB',color:'#185FA5'},admin:{bg:'#FAEEDA',color:'#854F0B'}}
+  const rc=roleColors[role]||{bg:'#f0ede6',color:'#888780'}
+  const isAdmin=role==='admin'
+  const isMkt=role==='marketing'||role==='admin'
+  const reviewing=state.requests.filter(r=>r.status==='reviewing').length
+
+  const navItems = isMkt
+    ? [{v:'queue',l:'Queue'},{v:'workload',l:'Workload'},{v:'calendar',l:'Calendar'},{v:'performance',l:'Performance'}]
+    : [{v:'dashboard',l:'My Requests'},{v:'new',l:'+ New Request'}]
+  const adminNav = isAdmin ? [{v:'admin',l:'Admin'}] : []
+  const allNav = [...navItems,...adminNav]
+
+  return`
+<header>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="width:32px;height:32px;border-radius:50%;background:#f0ede6;display:flex;align-items:center;justify-content:center;font-size:16px">🦬</div>
+    <div>
+      <div style="font-size:14px;font-weight:700">BGPD Marketing Hub</div>
+      <div style="font-size:11px;color:#888780">Buffalo Grove Park District</div>
+    </div>
+  </div>
+  <nav class="nav">
+    ${allNav.map(n=>`<button class="nav-btn${state.view===n.v?' active':''}" onclick="setView('${n.v}')">${n.l}${n.v==='queue'&&reviewing>0?`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#BA7517;margin-left:4px;vertical-align:middle"></span>`:''}</button>`).join('')}
+  </nav>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:28px;height:28px;border-radius:50%;background:${rc.bg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:${rc.color}">${initials(u.full_name)}</div>
+      <div>
+        <div style="font-size:13px;font-weight:600">${u.full_name}</div>
+        <span class="badge badge-${role}">${role.charAt(0).toUpperCase()+role.slice(1)}</span>
+      </div>
+    </div>
+    <button class="btn btn-sm" onclick="signOut()">Sign out</button>
+  </div>
+</header>
+<main>
+  ${state.view==='new' ? renderRequestForm()
+    : state.view==='detail' ? renderDetail()
+    : state.view==='dashboard' ? renderStaffDashboard()
+    : state.view==='queue' ? renderQueue()
+    : state.view==='workload' ? renderWorkload()
+    : state.view==='calendar' ? renderCalendar()
+    : state.view==='performance' ? renderPerformance()
+    : state.view==='admin' ? renderAdmin()
+    : ''}
+</main>`
+}
+
+function bindShell(){
+  bindCurrentView()
+}
+
+function setView(v){
+  state.view=v
+  state.selectedReq=null
+  if(v==='queue'||v==='dashboard')loadRequests()
+  if(v==='admin')loadUsers()
+  render()
+}
+
+// ─────────────────────────────────────────
+// STAFF DASHBOARD
+// ─────────────────────────────────────────
+function renderStaffDashboard(){
+  const reqs=state.requests
+  const needsInfo=reqs.filter(r=>r.clarification_needed)
+  return`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div><h2 style="font-size:20px;font-weight:700;margin:0">My requests</h2><p style="font-size:13px;color:#888780;margin-top:2px">Track and manage your marketing requests</p></div>
+    <button class="btn btn-submit" onclick="setView('new')">+ New request</button>
+  </div>
+  <div class="g4" style="margin-bottom:20px">
+    <div class="stat"><div class="stat-label">Total</div><div class="stat-val">${reqs.length}</div></div>
+    <div class="stat"><div class="stat-label">In progress</div><div class="stat-val" style="color:#3B6D11">${reqs.filter(r=>r.status==='active').length}</div></div>
+    <div class="stat"><div class="stat-label">Complete</div><div class="stat-val" style="color:#888780">${reqs.filter(r=>r.status==='done').length}</div></div>
+    <div class="stat"><div class="stat-label">Needs your info</div><div class="stat-val" style="color:#BA7517">${needsInfo.length}</div></div>
+  </div>
+  ${reqs.length===0?`<div class="empty"><div class="empty-icon">📋</div><h3 style="font-size:17px;font-weight:600;margin-bottom:8px">No requests yet</h3><p style="font-size:14px;color:#888780;margin-bottom:16px">Submit your first marketing request to get started.</p><button class="btn btn-primary" onclick="setView('new')">+ New request</button></div>`:''}
+  ${needsInfo.length>0?`<div style="font-size:12px;font-weight:600;color:#854F0B;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Needs your attention</div>${needsInfo.map(r=>renderReqCard(r)).join('')}<div style="margin-bottom:16px"></div>`:''}
+  ${reqs.filter(r=>!r.clarification_needed).map(r=>renderReqCard(r)).join('')}
+  `
+}
+
+function renderReqCard(r){
+  const score=r.priority_score||0
+  const days=daysUntil(r.registration_deadline)
+  return`<div class="card" style="cursor:pointer;margin-bottom:8px" onclick="openDetail('${r.id}')">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
+      <div>
+        <div style="font-size:14px;font-weight:600">${r.program_name}${r.clarification_needed?'<span class="badge badge-reviewing" style="margin-left:8px">Needs info</span>':''}</div>
+        <div style="font-size:12px;color:#888780;margin-top:2px">${r.program_type||''} ${r.marketing_goal?'· '+r.marketing_goal:''}</div>
+      </div>
+      <span class="badge badge-${r.status}">${STATUS_LABELS[r.status]}</span>
+    </div>
+    <div style="background:#f5f4f0;border-radius:3px;height:4px;overflow:hidden"><div style="width:${score}%;height:100%;background:${priColor(score)};border-radius:3px"></div></div>
+    <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:#888780">
+      <span>Submitted ${fmtDate(r.created_at)}</span>
+      ${r.registration_deadline?`<span style="color:${days!==null&&days<14?'#BA7517':'#888780'}">Deadline: ${fmtDate(r.registration_deadline)}</span>`:''}
+      ${r.assigned_to_name?`<span>Assigned to ${r.assigned_to_name}</span>`:''}
+    </div>
+  </div>`
+}
+
+// ─────────────────────────────────────────
+// REQUEST FORM
+// ─────────────────────────────────────────
+function renderRequestForm(){
+  const f=state.form
+  const score=calcScore(f)
+  const step=state.formStep
+  const steps=['Program details','Audience & messaging','Channels & assets','Review & submit']
+
+  return`
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+    <button class="btn btn-sm" onclick="setView('dashboard')">← Cancel</button>
+    <h2 style="font-size:18px;font-weight:700;flex:1">New marketing request</h2>
+    <div class="step-dots">
+      ${[1,2,3,4].map(n=>`<div class="dot ${n<step?'done':n===step?'active':'pending'}"></div>`).join('')}
+    </div>
+    <span style="font-size:12px;color:#888780">Step ${step} of 4 — ${steps[step-1]}</span>
+  </div>
+  ${step===1?renderFormStep1(f,score):''}
+  ${step===2?renderFormStep2(f):''}
+  ${step===3?renderFormStep3(f):''}
+  ${step===4?renderFormStep4(f,score):''}
+  <div id="form-err"></div>
+  <div style="display:flex;justify-content:space-between;margin-top:8px">
+    <div>${step>1?`<button class="btn" onclick="formStep(${step-1})">← Back</button>`:''}</div>
+    <div>${step<4
+      ?`<button class="btn btn-primary" onclick="formStep(${step+1})">${steps[step]} →</button>`
+      :`<button id="submit-btn" class="btn btn-submit" onclick="submitForm()">Submit request →</button>`
+    }</div>
+  </div>`
+}
+
+function renderFormStep1(f,score){
+  const days=daysUntil(f.registration_deadline||f.start_date)
+  let leadAlert=''
+  if(days!==null&&days<21){
+    const cls=days<7?'alert-error':'alert-warn'
+    const msg=days<7?'⚠ Less than 7 days — rush request':'⚡ Under 3 weeks — limited channels available'
+    leadAlert=`<div class="alert ${cls}">${msg}</div>`
+  }
+  return`
+  <div class="card">
+    <div class="card-title">Program or event</div>
+    <div class="g3">
+      <div class="field" style="grid-column:span 2"><label>Program name</label><input value="${f.program_name}" oninput="setForm('program_name',this.value)" placeholder="e.g. Youth Flag Football League"></div>
+      <div class="field"><label>Type</label><select onchange="setForm('program_type',this.value)"><option value="">Select…</option>${['Program / class','Community event','Facility rental','Special event','Membership campaign','League / sport'].map(o=>`<option${f.program_type===o?' selected':''}>${o}</option>`).join('')}</select></div>
+    </div>
+    <div class="g4" style="margin-top:10px">
+      <div class="field"><label>Start date</label><input type="date" value="${f.start_date}" oninput="setForm('start_date',this.value)"></div>
+      <div class="field"><label>End date</label><input type="date" value="${f.end_date}" oninput="setForm('end_date',this.value)"></div>
+      <div class="field"><label>Time</label><input value="${f.program_time}" oninput="setForm('program_time',this.value)" placeholder="e.g. Sat 9–11am"></div>
+      <div class="field"><label>Location</label><input value="${f.location}" oninput="setForm('location',this.value)" placeholder="e.g. Alcott Center"></div>
+    </div>
+    <div class="g4" style="margin-top:10px">
+      <div class="field"><label>Reg. deadline</label><input type="date" value="${f.registration_deadline}" oninput="setForm('registration_deadline',this.value)"></div>
+      <div class="field"><label>Enrollment goal</label><input type="number" value="${f.enrollment_goal}" oninput="setForm('enrollment_goal',this.value)" placeholder="# participants"></div>
+      <div class="field"><label>Season</label><select onchange="setForm('season',this.value)"><option value="">Select…</option>${SEASONS.map(s=>`<option${f.season===s?' selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="field"><label>Department</label><select onchange="setForm('department',this.value)"><option value="">Select…</option>${DEPARTMENTS.map(d=>`<option${f.department===d?' selected':''}>${d}</option>`).join('')}</select></div>
+    </div>
+    ${leadAlert}
+  </div>
+  <div class="card">
+    <div class="card-title">Primary marketing goal</div>
+    <div class="goal-grid">
+      ${GOALS.map(g=>`<div class="goal-opt${f.marketing_goal===g.value?' selected':''}" onclick="setForm('marketing_goal','${g.value}')"><div class="goal-name">${g.value}</div><div class="goal-desc">${g.desc}</div></div>`).join('')}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Priority assessment</div>
+    ${[{label:'Urgency level',key:'urgency_level',opts:['low','medium','high'],labels:['Low','Medium','High']},
+       {label:'Revenue / strategic impact',key:'impact_level',opts:['low','medium','high'],labels:['Low','Medium','High']},
+       {label:'Audience reach',key:'reach_level',opts:['low','medium','high'],labels:['Narrow','Medium','Broad']}
+    ].map(row=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:13px;color:#5f5e5a">${row.label}</span>
+        <div class="tri-opts">${row.opts.map((o,i)=>`<button class="tri-btn${f[row.key]===o?' active':''}" onclick="setForm('${row.key}','${o}')">${row.labels[i]}</button>`).join('')}</div>
+      </div>`).join('')}
+    <div class="pri-bar-wrap">
+      <span style="font-size:12px;color:#888780">Priority score</span>
+      <div class="pri-track"><div class="pri-fill" style="width:${score}%;background:${priColor(score)}"></div></div>
+      <span style="font-size:13px;font-weight:600;color:${score>0?priColor(score):'#888780'}">${score>0?score+'/100':'—'}</span>
+      ${score>0?`<span class="badge ${priBadge(score)}">${priLabel(score)}</span>`:''}
+    </div>
+  </div>`
+}
+
+function renderFormStep2(f){
+  const oneliner=[f.post_for&&`For ${f.post_for}`,f.post_why&&f.post_why,f.post_cta&&f.post_cta].filter(Boolean).join('. ')
+  return`
+  <div class="card">
+    <div class="card-title">Target audience</div>
+    <div class="g2">
+      <div class="field"><label>Age range</label><input value="${f.target_age}" oninput="setForm('target_age',this.value)" placeholder="e.g. Ages 6–12"></div>
+      <div class="field"><label>Who are they?</label><input value="${f.target_who}" oninput="setForm('target_who',this.value)" placeholder="e.g. Kids and their parents"></div>
+    </div>
+    <div class="g2" style="margin-top:10px">
+      <div class="field"><label>Surface reason they sign up</label><textarea oninput="setForm('surface_reason',this.value)" placeholder="What they say they want…">${f.surface_reason}</textarea></div>
+      <div class="field"><label>Deeper reason (what really matters)</label><textarea oninput="setForm('deeper_reason',this.value)" placeholder="What actually drives them…">${f.deeper_reason}</textarea></div>
+    </div>
+    <div class="g2" style="margin-top:10px">
+      <div class="field"><label>Barriers</label><input value="${f.barriers}" oninput="setForm('barriers',this.value)" placeholder="Cost, timing, intimidation…"></div>
+      <div class="field"><label>How to reduce barriers</label><input value="${f.barrier_reduction}" oninput="setForm('barrier_reduction',this.value)" placeholder="Messaging, pricing, framing…"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Key message</div>
+    <div class="field"><label>Single most important thing the audience should know</label><div class="tip">This becomes the headline for all creative assets</div><textarea oninput="setForm('key_message',this.value)" placeholder="e.g. This league is for kids who've never played — small teams, patient coaches, no experience needed.">${f.key_message}</textarea></div>
+    <div class="field" style="margin-top:10px"><label>What makes this stand out?</label><textarea oninput="setForm('standout',this.value)" placeholder="Unique differentiators…">${f.standout}</textarea></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Program highlights (3–5 bullets)</div>
+    <div id="highlights-list">
+      ${(f.highlights||[]).map((h,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:7px"><span style="color:#888780">•</span><input value="${h}" oninput="setHighlight(${i},this.value)" placeholder="Highlight ${i+1}"></div>`).join('')}
+    </div>
+    <button class="add-btn" onclick="addHighlight()">+ Add highlight</button>
+  </div>
+  <div class="card">
+    <div class="card-title">One-post summary</div>
+    <div class="g3">
+      <div class="field"><label>Who it's for</label><input value="${f.post_for}" oninput="setForm('post_for',this.value)" placeholder="Kids new to football"></div>
+      <div class="field"><label>Why it matters</label><input value="${f.post_why}" oninput="setForm('post_why',this.value)" placeholder="Builds confidence and skills"></div>
+      <div class="field"><label>Call to action</label><input value="${f.post_cta}" oninput="setForm('post_cta',this.value)" placeholder="Register before teams fill"></div>
+    </div>
+    ${oneliner?`<div style="margin-top:10px;background:#f5f4f0;border-radius:8px;padding:10px 12px"><div style="font-size:11px;color:#888780;margin-bottom:4px">Draft copy</div><div style="font-size:13px">${oneliner}</div></div>`:''}
+  </div>`
+}
+
+function renderFormStep3(f){
+  return`
+  <div class="card">
+    <div class="card-title">Promotion channels</div>
+    <div class="channel-grid">
+      ${CHANNELS.map(ch=>`<div class="chip${(f.channels||[]).includes(ch.value)?' selected':''}" onclick="toggleChannel('${ch.value}')"><span>${ch.icon}</span>${ch.label}</div>`).join('')}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Photos, video & graphics</div>
+    <div class="g3">
+      <div><div style="font-size:13px;font-weight:600;margin-bottom:8px">Photos</div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;margin-bottom:6px"><input type="checkbox" ${f.photos_supplied?'checked':''} onchange="setForm('photos_supplied',this.checked)"> I'll supply photos</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer"><input type="checkbox" ${f.photos_by_marketing?'checked':''} onchange="setForm('photos_by_marketing',this.checked)"> Marketing dept to shoot</label>
+      </div>
+      <div><div style="font-size:13px;font-weight:600;margin-bottom:8px">Video</div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer"><input type="checkbox" ${f.video_needed?'checked':''} onchange="setForm('video_needed',this.checked)"> Video needed</label>
+      </div>
+      <div><div style="font-size:13px;font-weight:600;margin-bottom:8px">Graphics</div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;margin-bottom:6px"><input type="checkbox" ${f.graphics_existing?'checked':''} onchange="setForm('graphics_existing',this.checked)"> Use existing guide graphics</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer"><input type="checkbox" ${f.graphics_new?'checked':''} onchange="setForm('graphics_new',this.checked)"> Design new graphics</label>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Partners & notes</div>
+    <div class="field"><label>Who else could help promote this?</label><input value="${f.partners||''}" oninput="setForm('partners',this.value)" placeholder="Schools, PTOs, libraries, sponsors…"></div>
+    <div class="field" style="margin-top:10px"><label>Fun fact or hook</label><textarea oninput="setForm('fun_fact',this.value)" placeholder="Something surprising or shareable…">${f.fun_fact||''}</textarea></div>
+    <div class="field" style="margin-top:10px"><label>Anything else marketing should know?</label><textarea oninput="setForm('notes',this.value)" placeholder="Budget limits, approval needs, past campaigns to reference…">${f.notes||''}</textarea></div>
+  </div>`
+}
+
+function renderFormStep4(f,score){
+  return`
+  <div class="card">
+    <div class="card-title">Review your request</div>
+    <div style="background:#f5f4f0;border-radius:8px;padding:4px 14px">
+      ${[['Program',f.program_name],['Type',f.program_type],['Season',f.season],['Department',f.department],['Dates',[f.start_date,f.end_date].filter(Boolean).join(' → ')],['Location',f.location],['Reg. deadline',fmtDate(f.registration_deadline)],['Marketing goal',f.marketing_goal],['Priority score',score>0?`${score}/100 — ${priLabel(score)}`:'—'],['Audience',[f.target_age,f.target_who].filter(Boolean).join(', ')],['Key message',f.key_message],['Channels',(f.channels||[]).join(', ')]]
+        .filter(([,v])=>v)
+        .map(([l,v])=>`<div style="display:flex;gap:12px;padding:7px 0;border-bottom:1px solid #eceae2;font-size:13px"><div style="width:140px;color:#888780;flex-shrink:0">${l}</div><div>${v}</div></div>`).join('')}
+    </div>
+  </div>`
+}
+
+// ─────────────────────────────────────────
+// REQUEST DETAIL
+// ─────────────────────────────────────────
+function renderDetail(){
+  const r=state.selectedReq
+  if(!r)return''
+  const score=r.priority_score||0
+  const days=daysUntil(r.registration_deadline)
+  const isMkt=state.mktUser?.role==='marketing'||state.mktUser?.role==='admin'
+  const nextStatus=STATUSES[STATUSES.indexOf(r.status)+1]
+  const prevStatus=STATUSES[STATUSES.indexOf(r.status)-1]
+
+  return`
+  <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px">
+    <button class="btn btn-sm" onclick="setView(${state.mktUser?.role==='staff'?'\'dashboard\'':'\'queue\''})">← Back</button>
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <h2 style="font-size:18px;font-weight:700;margin:0">${r.program_name}</h2>
+        <span class="badge badge-${r.status}">${STATUS_LABELS[r.status]}</span>
+        ${r.clarification_needed?'<span class="badge badge-reviewing">Needs info from staff</span>':''}
+      </div>
+      <div style="font-size:12px;color:#888780;margin-top:2px">#${r.request_number||''} · ${r.staff_name||''} · ${r.department||''} · Submitted ${fmtDate(r.created_at)}</div>
+    </div>
+    ${isMkt?`<div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${prevStatus?`<button class="btn btn-sm" onclick="updateStatus('${r.id}','${prevStatus}')">← ${STATUS_LABELS[prevStatus]}</button>`:''}
+      ${nextStatus?`<button class="btn btn-sm btn-success" onclick="updateStatus('${r.id}','${nextStatus}')">Move to ${STATUS_LABELS[nextStatus]} →</button>`:''}
+    </div>`:''}
+  </div>
+  ${r.clarification_needed?`<div class="alert alert-warn" style="margin-bottom:16px"><strong>Marketing needs more information</strong>${r.clarification_note?'<br>'+r.clarification_note:''}<br><span style="font-size:12px">Please reply in the Messages tab.</span></div>`:''}
+  <div class="tabs">
+    ${['Brief','Messages','Deliverables','Timeline'].map(t=>`<button class="tab-btn${state.detailTab===t.toLowerCase()?' active':''}" onclick="setDetailTab('${t.toLowerCase()}')">${t}</button>`).join('')}
+  </div>
+  ${state.detailTab==='brief'?renderDetailBrief(r,score,isMkt):''}
+  ${state.detailTab==='messages'?renderMessages(isMkt):''}
+  ${state.detailTab==='deliverables'?renderDeliverables(isMkt):''}
+  ${state.detailTab==='timeline'?renderTimeline():''}
+  `
+}
+
+function renderDetailBrief(r,score,isMkt){
+  const fields=[['Program',r.program_name],['Type',r.program_type],['Dates',[r.start_date,r.end_date].filter(Boolean).map(fmtDate).join(' → ')],['Time',r.program_time],['Location',r.location],['Reg. deadline',fmtDate(r.registration_deadline)],['Enrollment goal',r.enrollment_goal?r.enrollment_goal+' participants':null],['Marketing goal',r.marketing_goal],['Audience',[r.target_age,r.target_who].filter(Boolean).join(', ')],['Key message',r.key_message],['What makes it stand out',r.standout],['Barriers',r.barriers],['Partners',r.partners]]
+  const highlights=(r.highlights||[]).filter(Boolean)
+  const channels=(r.channels||[])
+  return`
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+    ${fields.filter(([,v])=>v).map(([l,v])=>`<div style="background:#f5f4f0;border-radius:8px;padding:10px 12px"><div style="font-size:11px;color:#888780;margin-bottom:3px">${l}</div><div style="font-size:13px">${v}</div></div>`).join('')}
+    ${highlights.length>0?`<div style="background:#f5f4f0;border-radius:8px;padding:10px 12px;grid-column:span 2"><div style="font-size:11px;color:#888780;margin-bottom:6px">Highlights</div>${highlights.map(h=>`<div style="font-size:13px;margin-bottom:4px">• ${h}</div>`).join('')}</div>`:''}
+    ${channels.length>0?`<div style="background:#f5f4f0;border-radius:8px;padding:10px 12px;grid-column:span 2"><div style="font-size:11px;color:#888780;margin-bottom:6px">Channels</div><div style="display:flex;flex-wrap:wrap;gap:6px">${channels.map(ch=>{const c=CHANNELS.find(x=>x.value===ch);return`<span style="font-size:12px;padding:3px 9px;background:#fff;border-radius:20px;border:1px solid #e5e3db">${c?.icon} ${c?.label||ch}</span>`}).join('')}</div></div>`:''}
+  </div>
+  ${isMkt?`<div class="card">
+    <div class="card-title">Marketing team notes</div>
+    <textarea id="mkt-notes" style="width:100%;min-height:72px">${r.marketing_notes||''}</textarea>
+    <button class="btn btn-sm btn-primary" style="margin-top:8px" onclick="saveMktNotes()">Save notes</button>
+  </div>`:r.marketing_notes?`<div class="card"><div class="card-title">Note from marketing</div><div style="font-size:13px">${r.marketing_notes}</div></div>`:''}
+  ${!isMkt&&r.status==='done'&&!r.feedback_rating?renderFeedbackForm(r):''}
+  `
+}
+
+function renderFeedbackForm(r){
+  return`<div class="card" style="margin-top:12px">
+    <div class="card-title">How did this campaign go?</div>
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      ${[1,2,3,4,5].map(n=>`<button style="font-size:22px;background:none;border:none;cursor:pointer;opacity:${(state.feedbackRating||0)>=n?1:0.3}" onclick="setFeedbackRating(${n})">⭐</button>`).join('')}
+    </div>
+    <textarea id="feedback-note" placeholder="Optional comments…" style="width:100%;min-height:60px"></textarea>
+    <button class="btn btn-success btn-sm" style="margin-top:8px" onclick="submitFeedback('${r.id}')">Submit feedback</button>
+  </div>`
+}
+
+function renderMessages(isMkt){
+  const visible=isMkt?state.comments:state.comments.filter(c=>!c.is_internal)
+  return`
+  <div style="margin-bottom:14px">
+    ${visible.length===0?`<div style="font-size:13px;color:#aaa9a2;font-style:italic;padding:8px 0">No messages yet</div>`:''}
+    ${visible.map(c=>`<div class="comment" style="background:${c.is_internal?'#FAEEDA':'#f5f4f0'};${c.is_internal?'border:1px solid #FAC775':''}">
+      <div class="avatar">${initials(c.author_name)}</div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span style="font-size:12px;font-weight:600">${c.author_name}</span>
+          <span class="badge badge-${c.author_role}">${c.author_role}</span>
+          ${c.is_internal?'<span class="badge badge-reviewing">Internal note</span>':''}
+          <span style="font-size:11px;color:#aaa9a2;margin-left:auto">${fmtDate(c.created_at)}</span>
+        </div>
+        <div style="font-size:13px">${c.body}</div>
+      </div>
+    </div>`).join('')}
+  </div>
+  <textarea id="comment-body" placeholder="Add a message… (Cmd+Enter to send)" style="width:100%;min-height:64px;margin-bottom:8px"></textarea>
+  <div style="display:flex;align-items:center;gap:10px">
+    ${isMkt?`<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#888780;cursor:pointer"><input type="checkbox" id="internal-check"> Internal note (hidden from staff)</label>`:''}
+    <div style="margin-left:auto"><button class="btn btn-sm btn-primary" onclick="sendComment()">Send</button></div>
+  </div>`
+}
+
+function renderDeliverables(canEdit){
+  const done=state.deliverables.filter(d=>d.completed).length
+  return`
+  ${state.deliverables.length>0?`<div style="font-size:11px;color:#888780;margin-bottom:8px">${done}/${state.deliverables.length} complete</div>`:''}
+  <div style="margin-bottom:10px">
+    ${state.deliverables.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;background:${d.completed?'#EAF3DE':'#f5f4f0'};margin-bottom:6px">
+      <input type="checkbox" ${d.completed?'checked':''} onchange="toggleDeliverable('${d.id}',this.checked)" ${canEdit?'':'disabled'} style="width:15px;height:15px">
+      <span style="flex:1;font-size:13px;${d.completed?'text-decoration:line-through;color:#5f5e5a':''}">${d.label}</span>
+      ${d.completed_by?`<span style="font-size:11px;color:#3B6D11">✓ ${d.completed_by}</span>`:''}
+    </div>`).join('')}
+  </div>
+  ${canEdit?`<div style="display:flex;gap:8px"><input id="new-deliv" placeholder="Add deliverable…" style="flex:1"><input type="date" id="new-deliv-date" style="width:140px"><button class="btn btn-sm btn-primary" onclick="addDelivFromUI()">Add</button></div>`:''}
+  `
+}
+
+function renderTimeline(){
+  if(!state.statusHistory.length)return`<div style="font-size:13px;color:#aaa9a2;font-style:italic">No history yet</div>`
+  return state.statusHistory.map((h,i)=>`
+  <div style="display:flex;gap:12px;position:relative">
+    <div style="display:flex;flex-direction:column;align-items:center;width:20px;flex-shrink:0">
+      <div style="width:8px;height:8px;border-radius:50%;background:${i===state.statusHistory.length-1?'#1D9E75':'#dddbd3'};margin-top:4px;flex-shrink:0"></div>
+      ${i<state.statusHistory.length-1?`<div style="width:1px;flex:1;background:#f0ede6;min-height:20px"></div>`:''}
+    </div>
+    <div style="padding-bottom:12px">
+      <div style="font-size:12px;font-weight:600">${h.new_status?STATUS_LABELS[h.new_status]||h.new_status:'Submitted'}</div>
+      <div style="font-size:11px;color:#888780">${h.changed_by_name} · ${fmtDate(h.created_at)}</div>
+      ${h.note?`<div style="font-size:12px;color:#5f5e5a;margin-top:2px">${h.note}</div>`:''}
+    </div>
+  </div>`).join('')
+}
+
+// ─────────────────────────────────────────
+// QUEUE (marketing)
+// ─────────────────────────────────────────
+function renderQueue(){
+  const reqs=state.requests
+  const reviewing=reqs.filter(r=>r.status==='reviewing').length
+  const active=reqs.filter(r=>r.status==='active').length
+  const high=reqs.filter(r=>(r.priority_score||0)>=70&&r.status!=='done').length
+
+  return`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div><h2 style="font-size:20px;font-weight:700;margin:0">Marketing queue</h2></div>
+    <div class="nav">
+      ${['queue','workload','calendar','performance'].map(v=>`<button class="nav-btn${state.view===v?' active':''}" onclick="setView('${v}')">${v.charAt(0).toUpperCase()+v.slice(1)}</button>`).join('')}
+    </div>
+  </div>
+  <div class="g4" style="margin-bottom:18px">
+    <div class="stat"><div class="stat-label">Active</div><div class="stat-val">${reqs.filter(r=>r.status!=='done').length}</div></div>
+    <div class="stat"><div class="stat-label">Being reviewed</div><div class="stat-val" style="color:#BA7517">${reviewing}</div></div>
+    <div class="stat"><div class="stat-label">In progress</div><div class="stat-val" style="color:#3B6D11">${active}</div></div>
+    <div class="stat"><div class="stat-label">High priority</div><div class="stat-val" style="color:#E24B4A">${high}</div></div>
+  </div>
+  ${reqs.length===0?`<div class="empty"><div class="empty-icon">✅</div><h3>Queue is clear</h3></div>`:''}
+  <div class="kanban">
+    ${STATUSES.map(status=>{
+      const items=reqs.filter(r=>r.status===status).sort((a,b)=>(b.priority_score||0)-(a.priority_score||0))
+      return`<div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:600;letter-spacing:.06em;color:#888780;text-transform:uppercase">${STATUS_LABELS[status]}</span>
+          <span style="font-size:11px;background:#f0ede6;border-radius:20px;padding:1px 8px;color:#5f5e5a">${items.length}</span>
+        </div>
+        ${items.length===0?`<div style="border:1px dashed #e5e3db;border-radius:10px;padding:16px;text-align:center;font-size:12px;color:#aaa9a2">Empty</div>`:''}
+        ${items.map(r=>{
+          const score=r.priority_score||0
+          const days=daysUntil(r.registration_deadline)
+          const chLabels=(r.channels||[]).slice(0,3).map(v=>CHANNELS.find(c=>c.value===v)?.label||v).join(', ')
+          return`<div class="kcard" onclick="openDetail('${r.id}')">
+            <div style="height:3px;border-radius:2px;background:${priColor(score)};margin-bottom:10px;margin-top:-2px"></div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:3px">${r.program_name}${r.clarification_needed?'<span class="badge badge-reviewing" style="margin-left:6px;font-size:10px">Needs info</span>':''}</div>
+            <div style="font-size:11px;color:#888780">${r.staff_name||''} · ${r.department||''}</div>
+            ${chLabels?`<div style="font-size:11px;color:#888780;margin-top:2px">${chLabels}</div>`:''}
+            <div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap">
+              ${score>0?`<span class="badge ${priBadge(score)}">${score}/100</span>`:''}
+              ${r.assigned_to_name?`<span class="badge badge-marketing">${r.assigned_to_name}</span>`:''}
+              ${days!==null&&days<=14?`<span class="badge ${days<7?'badge-high':'badge-reviewing'}">${days}d left</span>`:''}
+            </div>
+          </div>`
+        }).join('')}
+      </div>`
+    }).join('')}
+  </div>`
+}
+
+// ─────────────────────────────────────────
+// WORKLOAD
+// ─────────────────────────────────────────
+function renderWorkload(){
+  const active=state.requests.filter(r=>r.status!=='done')
+  const byPerson={}
+  active.forEach(r=>{const n=r.assigned_to_name||'Unassigned';if(!byPerson[n])byPerson[n]=[];byPerson[n].push(r)})
+  return`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <h2 style="font-size:20px;font-weight:700;margin:0">Workload</h2>
+    <div class="nav">${['queue','workload','calendar','performance'].map(v=>`<button class="nav-btn${state.view===v?' active':''}" onclick="setView('${v}')">${v.charAt(0).toUpperCase()+v.slice(1)}</button>`).join('')}</div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+    ${Object.entries(byPerson).map(([name,reqs])=>`
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div class="avatar" style="width:32px;height:32px;font-size:13px">${initials(name)}</div>
+        <div><div style="font-size:13px;font-weight:600">${name}</div><div style="font-size:11px;color:#888780">${reqs.length} active</div></div>
+      </div>
+      ${reqs.map(r=>`<div style="font-size:12px;padding:5px 8px;background:#f5f4f0;border-radius:6px;margin-bottom:4px"><div style="font-weight:500;margin-bottom:2px">${r.program_name}</div><span class="badge badge-${r.status}">${STATUS_LABELS[r.status]}</span></div>`).join('')}
+    </div>`).join('')}
+  </div>`
+}
+
+// ─────────────────────────────────────────
+// CALENDAR
+// ─────────────────────────────────────────
+function renderCalendar(){
+  const upcoming=state.requests
+    .filter(r=>r.registration_deadline||r.start_date)
+    .map(r=>({...r,targetDate:r.registration_deadline||r.start_date}))
+    .sort((a,b)=>new Date(a.targetDate)-new Date(b.targetDate))
+    .slice(0,20)
+  return`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <h2 style="font-size:20px;font-weight:700;margin:0">Calendar</h2>
+    <div class="nav">${['queue','workload','calendar','performance'].map(v=>`<button class="nav-btn${state.view===v?' active':''}" onclick="setView('${v}')">${v.charAt(0).toUpperCase()+v.slice(1)}</button>`).join('')}</div>
+  </div>
+  <div style="font-size:13px;color:#888780;margin-bottom:14px">Upcoming deadlines and start dates</div>
+  ${upcoming.length===0?`<div class="empty"><div class="empty-icon">📅</div><h3 style="font-size:17px">No upcoming dates</h3></div>`:''}
+  ${upcoming.map(r=>{
+    const days=daysUntil(r.targetDate)
+    const d=new Date(r.targetDate)
+    return`<div style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:#fff;border:1px solid #e5e3db;border-radius:9px;margin-bottom:8px">
+      <div style="width:48px;text-align:center;flex-shrink:0">
+        <div style="font-size:20px;font-weight:700;color:${days<7?'#E24B4A':days<14?'#BA7517':'#1a1a18'};line-height:1">${d.getDate()}</div>
+        <div style="font-size:10px;color:#888780;text-transform:uppercase">${d.toLocaleString('en-US',{month:'short'})}</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${r.program_name}</div>
+        <div style="font-size:11px;color:#888780">${r.registration_deadline?'Reg. deadline':'Start date'} · ${r.staff_name}</div>
+      </div>
+      <span class="badge badge-${r.status}">${STATUS_LABELS[r.status]}</span>
+      ${days!==null?`<span class="badge ${days<0?'badge-high':days<7?'badge-high':days<14?'badge-reviewing':'badge-standard'}">${days<0?'Passed':days+'d'}</span>`:''}
+    </div>`
+  }).join('')}`
+}
+
+// ─────────────────────────────────────────
+// PERFORMANCE
+// ─────────────────────────────────────────
+function renderPerformance(){
+  const reqs=state.requests
+  const total=reqs.length
+  const done=reqs.filter(r=>r.status==='done').length
+  const avgScore=total?Math.round(reqs.reduce((s,r)=>s+(r.priority_score||0),0)/total):0
+  const byDept={},byGoal={},byCh={}
+  reqs.forEach(r=>{
+    const d=r.department||'Unknown';byDept[d]=(byDept[d]||0)+1
+    const g=r.marketing_goal||'Unknown';byGoal[g]=(byGoal[g]||0)+1
+    ;(r.channels||[]).forEach(c=>{byCh[c]=(byCh[c]||0)+1})
+  })
+  const topCh=Object.entries(byCh).sort((a,b)=>b[1]-a[1]).slice(0,6)
+  const topDept=Object.entries(byDept).sort((a,b)=>b[1]-a[1]).slice(0,6)
+  return`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <h2 style="font-size:20px;font-weight:700;margin:0">Performance</h2>
+    <div class="nav">${['queue','workload','calendar','performance'].map(v=>`<button class="nav-btn${state.view===v?' active':''}" onclick="setView('${v}')">${v.charAt(0).toUpperCase()+v.slice(1)}</button>`).join('')}</div>
+  </div>
+  <div class="g4" style="margin-bottom:20px">
+    <div class="stat"><div class="stat-label">Total requests</div><div class="stat-val">${total}</div></div>
+    <div class="stat"><div class="stat-label">Complete</div><div class="stat-val" style="color:#3B6D11">${done}</div></div>
+    <div class="stat"><div class="stat-label">Avg priority score</div><div class="stat-val" style="color:#BA7517">${avgScore}</div></div>
+    <div class="stat"><div class="stat-label">Active now</div><div class="stat-val" style="color:#185FA5">${reqs.filter(r=>r.status!=='done').length}</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">By department</div>
+      ${topDept.map(([d,c])=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d}</span>
+        <div style="width:80px;height:5px;background:#f0ede6;border-radius:3px;overflow:hidden"><div style="width:${total?((c/total)*100).toFixed(0):0}%;height:100%;background:#378ADD;border-radius:3px"></div></div>
+        <span style="font-size:12px;color:#888780;width:20px;text-align:right">${c}</span>
+      </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">Top channels</div>
+      ${topCh.map(([ch,c])=>{const channel=CHANNELS.find(x=>x.value===ch);return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:14px">${channel?.icon||'📌'}</span>
+        <span style="font-size:13px;flex:1">${channel?.label||ch}</span>
+        <span style="font-size:12px;color:#888780">${c}</span>
+      </div>`}).join('')}
+    </div>
+  </div>`
+}
+
+// ─────────────────────────────────────────
+// ADMIN
+// ─────────────────────────────────────────
+function renderAdmin(){
+  return`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div><h2 style="font-size:20px;font-weight:700;margin:0">Admin</h2></div>
+    <div class="nav">
+      ${['requests','users','settings'].map(s=>`<button class="nav-btn${state.adminSection===s?' active':''}" onclick="setAdminSection('${s}')">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`).join('')}
+    </div>
+  </div>
+  ${state.adminSection==='requests'?renderAdminRequests():''}
+  ${state.adminSection==='users'?renderAdminUsers():''}
+  ${state.adminSection==='settings'?renderAdminSettings():''}
+  `
+}
+
+function renderAdminRequests(){
+  const reqs=state.requests
+  return`
+  <div class="g4" style="margin-bottom:18px">
+    <div class="stat"><div class="stat-label">All time</div><div class="stat-val">${reqs.length}</div></div>
+    <div class="stat"><div class="stat-label">Active</div><div class="stat-val" style="color:#185FA5">${reqs.filter(r=>r.status!=='done').length}</div></div>
+    <div class="stat"><div class="stat-label">Complete</div><div class="stat-val" style="color:#3B6D11">${reqs.filter(r=>r.status==='done').length}</div></div>
+    <div class="stat"><div class="stat-label">High priority</div><div class="stat-val" style="color:#E24B4A">${reqs.filter(r=>(r.priority_score||0)>=70&&r.status!=='done').length}</div></div>
+  </div>
+  <div class="card" style="overflow-x:auto">
+    <table class="data-table">
+      <thead><tr>${['#','Program','Staff','Dept','Goal','Score','Status','Submitted'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>
+        ${reqs.map(r=>`<tr>
+          <td style="color:#888780">${r.request_number||''}</td>
+          <td style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.program_name}</td>
+          <td style="color:#5f5e5a">${r.staff_name||''}</td>
+          <td style="color:#888780">${r.department||'—'}</td>
+          <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#5f5e5a">${r.marketing_goal||'—'}</td>
+          <td style="font-weight:600;color:${priColor(r.priority_score||0)}">${r.priority_score||0}</td>
+          <td><select onchange="updateStatus('${r.id}',this.value)" style="border:none;background:transparent;font-size:12px;cursor:pointer">${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}"${r.status===v?' selected':''}>${l}</option>`).join('')}</select></td>
+          <td style="color:#888780;font-size:12px">${fmtDate(r.created_at)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`
+}
+
+function renderAdminUsers(){
+  return`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div style="font-size:13px;color:#888780">${state.users.length} users</div>
+    <button class="btn btn-submit btn-sm" onclick="showInviteForm()">+ Invite user</button>
+  </div>
+  <div id="invite-form-wrap"></div>
+  <div class="card" style="overflow-x:auto">
+    <table class="data-table">
+      <thead><tr>${['Name','Email','Role','Department','Last seen','Status'].map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>
+        ${state.users.map(u=>`<tr>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar">${initials(u.full_name)}</div><span style="font-weight:600">${u.full_name}</span></div></td>
+          <td style="color:#5f5e5a">${u.email}</td>
+          <td><span class="badge badge-${u.role}">${u.role}</span></td>
+          <td style="color:#888780">${u.department||'—'}</td>
+          <td style="font-size:12px;color:#888780">${u.last_seen_at?fmtDate(u.last_seen_at):'Never'}</td>
+          <td><span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;background:${u.is_active?'#EAF3DE':'#f0ede6'};color:${u.is_active?'#3B6D11':'#888780'}">${u.is_active?'Active':'Inactive'}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`
+}
+
+function renderAdminSettings(){
+  return`
+  <div class="card">
+    <div class="card-title">Lead time thresholds</div>
+    <div style="font-size:13px;color:#5f5e5a;margin-bottom:8px">Standard lead time: <strong>21 days</strong> · Rush threshold: <strong>7 days</strong></div>
+    <div style="font-size:12px;color:#aaa9a2">To change these values, update the mkt_settings table in Supabase → Table Editor.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Departments</div>
+    <div style="font-size:13px;color:#5f5e5a">${DEPARTMENTS.join(', ')}</div>
+  </div>`
+}
+
+// ─────────────────────────────────────────
+// EVENT HANDLERS (global functions)
+// ─────────────────────────────────────────
+window.setView=setView
+window.setAdminSection=s=>{state.adminSection=s;if(s==='users')loadUsers();render()}
+window.openDetail=async id=>{
+  state.selectedReq=state.requests.find(r=>r.id===id)||null
+  state.view='detail';state.detailTab='brief'
+  if(state.selectedReq){
+    await Promise.all([loadComments(id),loadDeliverables(id),loadHistory(id)])
+  }
+  render()
+}
+window.setDetailTab=t=>{state.detailTab=t;render()}
+window.setForm=(k,v)=>{state.form[k]=v;render()}
+window.setHighlight=(i,v)=>{state.form.highlights[i]=v}
+window.addHighlight=()=>{state.form.highlights.push('');render()}
+window.toggleChannel=v=>{
+  const chs=state.form.channels||[]
+  state.form.channels=chs.includes(v)?chs.filter(c=>c!==v):[...chs,v]
+  render()
+}
+window.formStep=async n=>{
+  if(n>state.formStep&&state.formStep===4){await submitForm();return}
+  state.formStep=n;render()
+}
+window.submitForm=async()=>{
+  if(!state.form.program_name.trim()){
+    document.getElementById('form-err').innerHTML='<div class="alert alert-error">Program name is required.</div>'
+    return
+  }
+  const btn=document.getElementById('submit-btn')
+  if(btn)btn.disabled=true
+  const ok=await submitRequest(state.form)
+  if(ok){state.form=blankForm();state.formStep=1;setView('dashboard')}
+  else if(btn)btn.disabled=false
+}
+window.sendComment=async()=>{
+  const body=document.getElementById('comment-body')?.value
+  const internal=document.getElementById('internal-check')?.checked||false
+  if(body){await addComment(body,internal);render()}
+}
+window.saveMktNotes=async()=>{
+  const notes=document.getElementById('mkt-notes')?.value||''
+  await updateRequest(state.selectedReq.id,{marketing_notes:notes})
+  toast('Notes saved')
+}
+window.addDelivFromUI=async()=>{
+  const label=document.getElementById('new-deliv')?.value
+  const date=document.getElementById('new-deliv-date')?.value
+  if(label){await addDeliverable(label,date);render()}
+}
+window.toggleDeliverable=async(id,checked)=>{await toggleDeliverable(id,checked)}
+window.updateStatus=async(id,status)=>{await updateStatus(id,status)}
+window.setFeedbackRating=n=>{state.feedbackRating=n;render()}
+window.submitFeedback=async(id)=>{
+  const note=document.getElementById('feedback-note')?.value||''
+  await updateRequest(id,{feedback_rating:state.feedbackRating,feedback_note:note})
+  toast('Thank you for your feedback!')
+  state.feedbackRating=null
+  render()
+}
+window.showInviteForm=()=>{
+  document.getElementById('invite-form-wrap').innerHTML=`
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-title">Invite new user</div>
+    <p style="font-size:13px;color:#5f5e5a;margin-bottom:12px">Create a user profile. The staff member signs up at the app URL using this email.</p>
+    <div class="g2">
+      <div class="field"><label>Full name</label><input id="inv-name" placeholder="Jane Smith"></div>
+      <div class="field"><label>Email</label><input type="email" id="inv-email" placeholder="jane@bgparks.org"></div>
+      <div class="field"><label>Role</label><select id="inv-role"><option value="staff">Staff</option><option value="marketing">Marketing</option><option value="admin">Admin</option></select></div>
+      <div class="field"><label>Department</label><select id="inv-dept"><option value="">None</option>${DEPARTMENTS.map(d=>`<option>${d}</option>`).join('')}</select></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn" onclick="document.getElementById('invite-form-wrap').innerHTML=''">Cancel</button>
+      <button class="btn btn-submit" onclick="createUser()">Create user</button>
+    </div>
+  </div>`
+}
+window.createUser=async()=>{
+  const name=document.getElementById('inv-name')?.value
+  const email=document.getElementById('inv-email')?.value
+  const role=document.getElementById('inv-role')?.value
+  const dept=document.getElementById('inv-dept')?.value
+  if(!name||!email){toast('Name and email are required','error');return}
+  const{error}=await sb.from('mkt_users').insert([{full_name:name,email,role,department:dept||null,avatar_initials:initials(name)}])
+  if(!error){toast('User created');await loadUsers();render()}
+  else toast('Error: '+error.message,'error')
+}
+
+function bindCurrentView(){}
+
+// ─────────────────────────────────────────
+// BOOT
+// ─────────────────────────────────────────
+init()
+</script>
+</body>
+</html>
