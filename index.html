@@ -531,27 +531,30 @@ async function doSignOut(){
 }
 
 // ── DATA ─────────────────────────────────────────────────────────
+// Explicit column selection — avoids fetching unused fields, cuts payload
+const REQ_COLS='id,created_at,request_number,program_name,program_type,start_date,end_date,program_time,location,staff_name,registration_deadline,enrollment_goal,season,department,marketing_goal,priority_score,urgency_level,impact_level,reach_level,target_who,key_message,highlights,channels,photos_supplied,photos_by_marketing,video_needed,graphics_new,notes,status,marketing_notes,assigned_to_name,submitted_by_id,clarification_needed,clarification_note,approved_at,approved_by,completed_at,feedback_rating,feedback_note,is_archived'
+
 async function loadReqs(){
-  let q2=SB.from('marketing_requests').select('*').order('created_at',{ascending:false})
+  let q2=SB.from('marketing_requests').select(REQ_COLS).order('created_at',{ascending:false})
   if(USER.role==='staff')q2=q2.eq('submitted_by_id',USER.id).eq('is_archived',false)
   const {data,error}=await q2
   if(error){toast('Error loading requests','err');return}
   ALL_REQS=data||[]
 }
 async function loadAllReqs(){
-  const {data}=await SB.from('marketing_requests').select('*').order('created_at',{ascending:false})
+  const {data}=await SB.from('marketing_requests').select(REQ_COLS).order('created_at',{ascending:false})
   ALL_REQS=data||[]
 }
 async function loadDetail(id){
   const [c,d,h]=await Promise.all([
-    SB.from('mkt_comments').select('*').eq('request_id',id).order('created_at',{ascending:true}),
-    SB.from('mkt_deliverables').select('*').eq('request_id',id).order('sort_order',{ascending:true}),
-    SB.from('mkt_status_history').select('*').eq('request_id',id).order('created_at',{ascending:true}),
+    SB.from('mkt_comments').select('id,created_at,author_name,author_role,body,is_internal').eq('request_id',id).order('created_at',{ascending:true}),
+    SB.from('mkt_deliverables').select('id,label,due_date,completed,completed_by,sort_order').eq('request_id',id).order('sort_order',{ascending:true}),
+    SB.from('mkt_status_history').select('id,created_at,changed_by_name,changed_by_role,old_status,new_status,note').eq('request_id',id).order('created_at',{ascending:true}),
   ])
   COMMENTS=c.data||[]; DELIVS=d.data||[]; HISTORY=h.data||[]
 }
 async function loadUsers(){
-  const {data}=await SB.from('mkt_users').select('*').order('full_name')
+  const {data}=await SB.from('mkt_users').select('id,full_name,email,role,department,is_active,last_seen_at,auth_user_id').order('full_name')
   USERS_LIST=data||[]
 }
 
@@ -679,15 +682,21 @@ function renderView(){
   else if(VIEW==='users')el.innerHTML=renderUsers()
 }
 
+let REQS_LOADED_AT = 0
 async function navTo(v){
   FILTER='all';SEARCH='';SELECTED=new Set();SEL_ID=null
   const mc=q('main-content')
-  if(mc)mc.innerHTML=`<div class="loading-screen"><div class="spinner"></div> Loading…</div>`
-  if(v==='requests'&&isMkt())await loadAllReqs()
-  else if(v==='admin')await loadAllReqs()
-  else if(v==='users')await loadUsers()
-  else if(v==='queue'||v==='workload'||v==='calendar'||v==='performance')await loadAllReqs()
-  else await loadReqs()
+  if(mc)mc.innerHTML=`<div class="loading-screen"><div class="spinner"></div></div>`
+  const now=Date.now()
+  const stale=now-REQS_LOADED_AT>30000 // reload if >30s old
+  if(v==='users'){
+    await loadUsers()
+  } else if(v==='requests'&&!isMkt()){
+    if(stale||!ALL_REQS.length){await loadReqs();REQS_LOADED_AT=now}
+  } else {
+    // admin, queue, workload, calendar, performance, mkt requests — all need full data
+    if(stale||!ALL_REQS.length){await loadAllReqs();REQS_LOADED_AT=now}
+  }
   VIEW=v; showApp()
 }
 
