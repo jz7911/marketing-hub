@@ -1478,10 +1478,10 @@ function renderAdminReqs(){
 function renderUsers(){
   return`
   <div class="sec-hd">
-    <div><div class="page-title">Users</div><div class="page-sub">${USERS_LIST.length} total · 2-step process to create logins</div></div>
+    <div><div class="page-title">Users</div><div class="page-sub">${USERS_LIST.length} total</div></div>
     <button class="btn btn-primary" onclick="openAddUser()">+ Add User</button>
   </div>
-  <div class="alert alert-info"><span class="alert-icon">ℹ️</span><div>Adding a user here creates their <strong>profile</strong>. To activate their login, message Claude: <em>"Add login for [email] password [password]"</em></div></div>
+  
   <div class="tbl-wrap">
     <table class="tbl">
       <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Dept</th><th>Last seen</th><th>Status</th><th>Actions</th></tr></thead>
@@ -1648,18 +1648,42 @@ async function createUser(){
   const dept=q('u-dept')?.value
   if(!name){toast('Full name is required','err');return}
   if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast('Valid email is required','err');return}
-  if(!pass){toast('Set a temporary password','err');return}
+  if(!pass||pass.length<8){toast('Password must be at least 8 characters','err');return}
   setBtn('u-btn',true,'Creating…')
-  const {data,error}=await SB.from('mkt_users').insert([{full_name:name,email:email.toLowerCase(),role,department:dept||null,is_active:true}]).select().single()
-  setBtn('u-btn',false)
-  if(error){
-    const msg=error.message.includes('unique')||error.message.includes('duplicate')?'A user with this email already exists.':'Error: '+error.message
+
+  // Step 1: create the profile row
+  const {data:profile,error:profileErr}=await SB.from('mkt_users')
+    .insert([{full_name:name,email:email.toLowerCase(),role,department:dept||null,is_active:true}])
+    .select().single()
+  if(profileErr){
+    setBtn('u-btn',false)
+    const msg=profileErr.message.includes('unique')||profileErr.message.includes('duplicate')
+      ?'A user with this email already exists.'
+      :'Error creating profile: '+profileErr.message
     toast(msg,'err')
     const res=q('u-result');if(res)res.innerHTML=`<div class="alert alert-error" style="margin-top:10px"><span class="alert-icon">⚠</span>${esc(msg)}</div>`
     return
   }
+
+  // Step 2: create auth account and link it — all in one DB function
+  const {error:authErr}=await SB.rpc('create_app_user',{
+    p_email:email.toLowerCase(),
+    p_password:pass,
+    p_profile_id:profile.id
+  })
+  setBtn('u-btn',false)
+  if(authErr){
+    // Profile was created but auth failed — show error but profile exists
+    toast('Profile saved but login setup failed: '+authErr.message,'err')
+    const res=q('u-result')
+    if(res)res.innerHTML=`<div class="alert alert-warn" style="margin-top:10px"><span class="alert-icon">⚠️</span><div style="font-size:12px;line-height:1.7"><strong>Profile created but login activation failed.</strong><br>Message Claude: "Add login for ${esc(email)} password ${esc(pass)}"</div></div>`
+    await loadUsers()
+    return
+  }
+
+  // Full success
   const res=q('u-result')
-  if(res)res.innerHTML=`<div class="alert alert-success" style="margin-top:10px"><span class="alert-icon">✅</span><div style="font-size:12px;line-height:1.7"><strong>${esc(name)} created!</strong><br>Now message Claude:<br><code style="background:rgba(0,0,0,.08);padding:2px 6px;border-radius:3px;font-size:11px">Add login for ${esc(email)} password ${esc(pass)}</code></div></div>`
+  if(res)res.innerHTML=`<div class="alert alert-success" style="margin-top:10px"><span class="alert-icon">✅</span><div style="font-size:12px;line-height:1.7"><strong>${esc(name)} is ready to log in!</strong><br>Email: <strong>${esc(email)}</strong><br>Password: <strong>${esc(pass)}</strong></div></div>`
   await loadUsers()
 }
 
