@@ -471,11 +471,73 @@ function deadlineTag(d,status){
 }
 
 function blankForm(){
-  return{program_name:'',program_type:'',start_date:'',end_date:'',program_time:'',
+  return{
+    program_name:'',program_type:'',start_date:'',end_date:'',program_time:'',
     location:'',registration_deadline:'',enrollment_goal:'',season:'',department:'',
+    // from paper forms
+    is_new_or_repeat:'',repeat_from_year:'',marketing_objective:'',
+    target_gender:'',target_ages:[],critical_content:'',
+    // marketing goal & priority
     marketing_goal:'',urgency_level:'',impact_level:'',reach_level:'',
-    target_who:'',key_message:'',highlights:'',channels:[],
-    photos_supplied:false,photos_by_marketing:false,video_needed:false,graphics_new:false,notes:''}
+    // content
+    target_who:'',key_message:'',highlights:'',notes:'',
+    // structured channels (new)
+    channels_v2:{print:[],digital:[],social:[],tv:[],other:[]},
+  }
+}
+
+// Channel definitions matching BGPD paper forms
+const CH_DEFS = {
+  print:[
+    {v:'flyer',l:'Flyer (8½ × 11")'},
+    {v:'shadow_box',l:'Shadow Box (21 × 33")'},
+    {v:'poster',l:'Poster Frame (24 × 36")'},
+    {v:'floor_stand',l:'Floor Stand Sign (22 × 28")'},
+    {v:'banner',l:'Banner (60 × 20")'},
+    {v:'template',l:'Template (8½ × 11")'},
+    {v:'print_other',l:'Other Print'},
+  ],
+  digital:[
+    {v:'website_slider',l:'Website Slider (Home Page)'},
+    {v:'email_blast_park',l:'Email Blast — Park District'},
+    {v:'email_blast_fc',l:'Email Blast — Fitness News'},
+    {v:'digital_road_sign',l:'Digital Road Sign'},
+    {v:'geofencing',l:'Geofencing Campaign'},
+  ],
+  social:[
+    {v:'facebook',l:'Facebook'},
+    {v:'instagram',l:'Instagram'},
+  ],
+  tv:[
+    {v:'tv_front_desk',l:'Front Desk (1920×1080)'},
+    {v:'tv_member_services',l:'Member Services (1920×1080)'},
+    {v:'tv_fitness_floor',l:'Fitness Floor (1920×1080)'},
+    {v:'tv_alcott',l:'Alcott Center (720×1280)'},
+    {v:'tv_cac',l:'CAC (720×1280)'},
+    {v:'tv_golf_dome',l:'Golf Dome (720×1280)'},
+    {v:'tv_raupp',l:'Raupp Museum (1920×1080)'},
+  ],
+  other:[
+    {v:'photos',l:'Photos needed'},
+    {v:'video',l:'Video needed'},
+  ]
+}
+const CH_LABELS = {print:'Print',digital:'Digital',social:'Social Media',tv:'TV Screens',other:'Photos & Video'}
+const CH_ICONS  = {print:'🖨',digital:'💻',social:'📱',tv:'📺',other:'📷'}
+
+function hasCh(f,cat,v){return (f.channels_v2&&f.channels_v2[cat]||[]).includes(v)}
+function toggleCh2(cat,v){
+  if(!FORM)return
+  if(!FORM.channels_v2)FORM.channels_v2={print:[],digital:[],social:[],tv:[],other:[]}
+  const arr=FORM.channels_v2[cat]||[]
+  FORM.channels_v2[cat]=arr.includes(v)?arr.filter(x=>x!==v):[...arr,v]
+  // Update just this chip visually
+  const chip=document.querySelector(`[data-ch2-cat="${cat}"][data-ch2-v="${v}"]`)
+  if(chip){
+    const on=FORM.channels_v2[cat].includes(v)
+    chip.classList.toggle('on',on)
+    chip.setAttribute('aria-checked',on)
+  }
 }
 
 function toast(msg, type='ok', icon=''){
@@ -536,7 +598,7 @@ async function doSignOut(){
 
 // ── DATA ─────────────────────────────────────────────────────────
 // Explicit column selection — avoids fetching unused fields, cuts payload
-const REQ_COLS='id,created_at,request_number,program_name,program_type,start_date,end_date,program_time,location,staff_name,registration_deadline,enrollment_goal,season,department,marketing_goal,priority_score,urgency_level,impact_level,reach_level,target_who,key_message,highlights,channels,photos_supplied,photos_by_marketing,video_needed,graphics_new,notes,status,marketing_notes,assigned_to_name,submitted_by_id,clarification_needed,clarification_note,approved_at,approved_by,completed_at,feedback_rating,feedback_note,is_archived'
+const REQ_COLS='id,created_at,request_number,program_name,program_type,start_date,end_date,program_time,location,staff_name,registration_deadline,enrollment_goal,season,department,marketing_goal,priority_score,urgency_level,impact_level,reach_level,target_who,key_message,highlights,channels,channels_v2,is_new_or_repeat,repeat_from_year,marketing_objective,target_gender,target_ages,critical_content,photos_supplied,photos_by_marketing,video_needed,graphics_new,notes,status,marketing_notes,assigned_to_name,submitted_by_id,clarification_needed,clarification_note,approved_at,approved_by,completed_at,feedback_rating,feedback_note,is_archived'
 
 async function loadReqs(){
   let q2=SB.from('marketing_requests').select(REQ_COLS).order('created_at',{ascending:false})
@@ -583,11 +645,18 @@ async function submitRequest(){
     target_who:f.target_who||null,
     key_message:f.key_message||null,
     highlights:f.highlights?f.highlights.split('\n').map(s=>s.trim()).filter(Boolean):[],
-    channels:Array.isArray(f.channels)?f.channels:[],
-    photos_supplied:!!f.photos_supplied,
-    photos_by_marketing:!!f.photos_by_marketing,
-    video_needed:!!f.video_needed,
-    graphics_new:!!f.graphics_new,
+    channels:[],  // legacy — kept for backward compat
+    channels_v2:f.channels_v2||{print:[],digital:[],social:[],tv:[],other:[]},
+    is_new_or_repeat:f.is_new_or_repeat||null,
+    repeat_from_year:f.repeat_from_year||null,
+    marketing_objective:f.marketing_objective||null,
+    target_gender:f.target_gender||null,
+    target_ages:Array.isArray(f.target_ages)?f.target_ages:[],
+    critical_content:f.critical_content||null,
+    photos_supplied:!!(f.channels_v2?.other||[]).includes('photos'),
+    photos_by_marketing:false,
+    video_needed:!!(f.channels_v2?.other||[]).includes('video'),
+    graphics_new:false,
     notes:f.notes||null,
     priority_score:calcScore(f),
     status:'new',
@@ -929,46 +998,97 @@ function renderForm(){
 }
 
 function renderFormS1(f,s){
+  const ages=['Youth (10–15)','Teen (16–18)','Student (14–24)','Adult (24–60)','Senior (60+)']
   return`
   <div class="card" style="margin-bottom:14px">
-    <div class="sec-label" style="margin-bottom:14px">What do you need promoted?</div>
+    <div class="sec-label" style="margin-bottom:14px">Program or Event Details</div>
     <div id="field-name" class="field">
-      <label for="f-name">Program or event name <span class="req" aria-label="required">✱</span></label>
+      <label for="f-name">Program / Event name <span class="req" aria-label="required">✱</span></label>
       <input id="f-name" value="${esc(f.program_name)}" placeholder="e.g. Youth Flag Football League" oninput="FORM.program_name=this.value" autocomplete="off" aria-required="true">
       <div class="err-msg" role="alert">Program name is required</div>
     </div>
     <div class="g2">
       <div class="field">
         <label>Type <span class="opt">(optional)</span></label>
-        <select onchange="FORM.program_type=this.value" aria-label="Program type">
+        <select onchange="FORM.program_type=this.value">
           <option value="">Select…</option>
           ${PTYPES.map(o=>`<option${f.program_type===o?' selected':''}>${o}</option>`).join('')}
         </select>
       </div>
       <div class="field">
         <label>Department <span class="opt">(optional)</span></label>
-        <select onchange="FORM.department=this.value" aria-label="Department">
+        <select onchange="FORM.department=this.value">
           <option value="">Select…</option>
           ${DEPTS.map(d=>`<option${f.department===d?' selected':''}>${d}</option>`).join('')}
         </select>
       </div>
       <div class="field">
-        <label for="f-start">Start date <span class="opt">(optional)</span></label>
-        <input type="date" id="f-start" value="${f.start_date}" onchange="FORM.start_date=this.value">
+        <label>Start date <span class="opt">(optional)</span></label>
+        <input type="date" value="${f.start_date}" onchange="FORM.start_date=this.value">
       </div>
       <div class="field">
-        <label for="f-deadline">Registration deadline <span class="opt">(optional)</span></label>
-        <input type="date" id="f-deadline" value="${f.registration_deadline}" onchange="FORM.registration_deadline=this.value;rerenderScore()">
+        <label>End date <span class="opt">(optional)</span></label>
+        <input type="date" value="${f.end_date}" onchange="FORM.end_date=this.value">
+      </div>
+      <div class="field">
+        <label>Registration deadline <span class="opt">(optional)</span></label>
+        <input type="date" value="${f.registration_deadline}" onchange="FORM.registration_deadline=this.value;rerenderScore()">
+      </div>
+      <div class="field">
+        <label>Location / Facility <span class="opt">(optional)</span></label>
+        <input value="${esc(f.location)}" placeholder="e.g. Alcott Center" oninput="FORM.location=this.value">
       </div>
     </div>
   </div>
 
   <div class="card" style="margin-bottom:14px">
-    <div class="sec-label" style="margin-bottom:4px">Primary Goal <span class="req">✱</span></div>
+    <div class="sec-label" style="margin-bottom:12px">Program Background</div>
+    <div class="g2" style="margin-bottom:14px">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Is this program…</div>
+        <div style="display:flex;gap:8px">
+          ${['new','repeat'].map(v=>`<label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid ${f.is_new_or_repeat===v?'var(--accent)':'var(--border)'};border-radius:7px;cursor:pointer;font-size:13px;font-weight:${f.is_new_or_repeat===v?600:400};color:${f.is_new_or_repeat===v?'var(--accent)':'var(--text-2)'};background:${f.is_new_or_repeat===v?'rgba(0,169,206,.06)':'var(--surface-2)'};user-select:none">
+            <input type="radio" name="new_repeat" value="${v}" ${f.is_new_or_repeat===v?'checked':''} onchange="FORM.is_new_or_repeat=this.value;renderView()" style="display:none">
+            ${v==='new'?'🆕 New':'🔄 Repeat'}
+          </label>`).join('')}
+        </div>
+        ${f.is_new_or_repeat==='repeat'?`<div class="field" style="margin-top:8px;margin-bottom:0"><label>Repeat from year <span class="opt">(optional)</span></label><input value="${esc(f.repeat_from_year)}" placeholder="e.g. 2024" oninput="FORM.repeat_from_year=this.value" style="max-width:120px"></div>`:''}
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px">Marketing objective</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${['retention','acquisition'].map(v=>`<label style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1.5px solid ${f.marketing_objective===v?'var(--accent)':'var(--border)'};border-radius:7px;cursor:pointer;font-size:13px;font-weight:${f.marketing_objective===v?600:400};color:${f.marketing_objective===v?'var(--accent)':'var(--text-2)'};background:${f.marketing_objective===v?'rgba(0,169,206,.06)':'var(--surface-2)'};user-select:none">
+            <input type="radio" name="mkt_obj" value="${v}" ${f.marketing_objective===v?'checked':''} onchange="FORM.marketing_objective=this.value;renderView()" style="display:none">
+            ${v==='retention'?'🔁 Retention':'➕ Acquisition'}
+          </label>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:5px">Retention = keep current members · Acquisition = attract new</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Target audience</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        ${['Male','Female','All'].map(v=>`<label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:1.5px solid ${f.target_gender===v.toLowerCase()?'var(--accent)':'var(--border)'};border-radius:20px;cursor:pointer;font-size:12px;font-weight:${f.target_gender===v.toLowerCase()?600:400};color:${f.target_gender===v.toLowerCase()?'var(--accent)':'var(--text-2)'};background:${f.target_gender===v.toLowerCase()?'rgba(0,169,206,.06)':'var(--surface-2)'};user-select:none">
+          <input type="radio" name="tgt_gender" value="${v.toLowerCase()}" ${f.target_gender===v.toLowerCase()?'checked':''} onchange="FORM.target_gender=this.value;renderView()" style="display:none">
+          ${v}
+        </label>`).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--text-2);margin-bottom:6px">Age groups (select all that apply)</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        ${ages.map(a=>{const on=(f.target_ages||[]).includes(a);return`<label style="display:flex;align-items:center;gap:5px;padding:5px 11px;border:1.5px solid ${on?'var(--accent)':'var(--border)'};border-radius:20px;cursor:pointer;font-size:12px;font-weight:${on?600:400};color:${on?'var(--accent)':'var(--text-2)'};background:${on?'rgba(0,169,206,.06)':'var(--surface-2)'};user-select:none">
+          <input type="checkbox" ${on?'checked':''} onchange="FORM.target_ages=FORM.target_ages||[];if(this.checked){if(!FORM.target_ages.includes('${a}'))FORM.target_ages.push('${a}')}else{FORM.target_ages=FORM.target_ages.filter(x=>x!=='${a}')};renderView()" style="display:none">
+          ${a}
+        </label>`}).join('')}
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="sec-label" style="margin-bottom:4px">Primary Marketing Goal <span class="req">✱</span></div>
     <div style="font-size:12px;color:var(--text-2);margin-bottom:12px">What is the most important outcome this campaign should achieve?</div>
     <div id="goal-err" class="alert alert-error" style="display:none;margin-bottom:10px" role="alert"><span class="alert-icon">⚠</span> Please select a goal</div>
-    <div class="goal-grid" id="goal-grid" role="group" aria-label="Marketing goal options">
-      ${GOALS.map(g=>`<div class="goal-card${f.marketing_goal===g.v?' on':''}" data-goal="${g.v}" role="radio" aria-checked="${f.marketing_goal===g.v}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.querySelectorAll('[data-goal]').forEach(el=>el.classList.toggle('on',el.dataset.goal==='${g.v}'));FORM.marketing_goal='${g.v}';q('goal-err').style.display='none'}">
+    <div class="goal-grid" id="goal-grid" role="group">
+      ${GOALS.map(g=>`<div class="goal-card${f.marketing_goal===g.v?' on':''}" data-goal="${g.v}" role="radio" aria-checked="${f.marketing_goal===g.v}" tabindex="0">
         <div class="goal-name">${g.v}</div>
         <div class="goal-desc">${g.d}</div>
       </div>`).join('')}
@@ -978,9 +1098,16 @@ function renderFormS1(f,s){
   <div class="card">
     <div class="sec-label" style="margin-bottom:4px">Priority Assessment <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-3)">(optional — helps us schedule your request)</span></div>
     <div style="font-size:12px;color:var(--text-2);margin-bottom:14px">Answer any or all — this determines where your request lands in the queue.</div>
-    ${[['Urgency','urgency_level','How time-sensitive is this?'],['Revenue Impact','impact_level','How big is the financial opportunity?'],['Audience Reach','reach_level','How many people will this reach?']].map(([label,key,hint])=>`
-    <div style="margin-bottom:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+    ${[
+      ['Urgency','urgency_level','How time-sensitive is this?',
+        {low:'Flexible timing — 3+ weeks lead time is fine',medium:'Preferred start within 2–3 weeks',high:'Deadline within 7 days or registration opens soon'}],
+      ['Revenue Impact','impact_level','What is the financial opportunity?',
+        {low:'Under $5,000 in expected revenue or cost recovery',medium:'$5,000–$20,000 in expected revenue',high:'Over $20,000 or critical cost recovery program'}],
+      ['Audience Reach','reach_level','How many people will this reach?',
+        {low:'Targeted — under 200 residents (niche program)',medium:'Moderate — 200–1,000 residents',high:'Broad — 1,000+ residents or district-wide'}],
+    ].map(([label,key,hint,bm])=>`
+    <div style="margin-bottom:18px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--text)">${label}</div>
           <div style="font-size:11px;color:var(--text-3)">${hint}</div>
@@ -988,6 +1115,9 @@ function renderFormS1(f,s){
         <div class="pri-pills" role="group" aria-label="${label} level">
           ${['low','medium','high'].map((o,i)=>`<button class="pri-pill${f[key]===o?' on':''}" data-pri-key="${key}" data-pri-val="${o}" aria-pressed="${f[key]===o}">${['Low','Medium','High'][i]}</button>`).join('')}
         </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
+        ${['low','medium','high'].map(o=>`<div style="font-size:11px;line-height:1.4;padding:7px 9px;background:${f[key]===o?'rgba(0,169,206,.07)':'var(--surface-2)'};border:1px solid ${f[key]===o?'rgba(0,169,206,.2)':'var(--border)'};border-radius:6px;color:${f[key]===o?'#0080A0':'var(--text-3)'}"><strong style="display:block;margin-bottom:2px;font-size:10px;text-transform:uppercase;letter-spacing:.04em">${o}</strong>${bm[o]}</div>`).join('')}
       </div>
     </div>`).join('')}
     <div id="score-bar" style="${s>0?'':'display:none'}">
@@ -1006,71 +1136,66 @@ function renderFormS1(f,s){
 }
 
 function renderFormS2(f){
+  const cv=f.channels_v2||{print:[],digital:[],social:[],tv:[],other:[]}
   return`
   <div class="card" style="margin-bottom:14px">
-    <div class="sec-label" style="margin-bottom:4px">Promotion Channels <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-3)">(optional — select all that apply)</span></div>
-    <div style="font-size:12px;color:var(--text-2);margin-bottom:12px">Where should this campaign appear? Select everything you'd ideally want — marketing will confirm what's realistic.</div>
-    <div class="ch-grid" role="group" aria-label="Channel options">
-      ${CHS.map(ch=>`<div class="chip${(f.channels||[]).includes(ch.v)?' on':''}" data-ch="${ch.v}" role="checkbox" aria-checked="${(f.channels||[]).includes(ch.v)}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCh('${ch.v}')}">
-        <span class="chip-icon" aria-hidden="true">${ch.i}</span>${ch.l}
-      </div>`).join('')}
+    <div class="sec-label" style="margin-bottom:4px">Requested Channels <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-3)">(select all that apply)</span></div>
+    <div style="font-size:12px;color:var(--text-2);margin-bottom:16px">Check everything you'd like — marketing will confirm what's feasible given the timeline.</div>
+    ${Object.entries(CH_DEFS).map(([cat,items])=>`
+    <div style="margin-bottom:18px">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
+        <span style="font-size:16px">${CH_ICONS[cat]}</span>
+        <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-2)">${CH_LABELS[cat]}</span>
+        ${(cv[cat]||[]).length>0?`<span style="font-size:11px;background:var(--accent);color:#fff;border-radius:20px;padding:1px 7px;font-weight:600">${(cv[cat]||[]).length}</span>`:''}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px">
+        ${items.map(ch=>{const on=(cv[cat]||[]).includes(ch.v);return`<div class="chip${on?' on':''}" data-ch2-cat="${cat}" data-ch2-v="${ch.v}" role="checkbox" aria-checked="${on}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCh2('${cat}','${ch.v}')}">
+          ${ch.l}
+        </div>`}).join('')}
+      </div>
+    </div>`).join('')}
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="sec-label" style="margin-bottom:14px">Critical Content <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-3)">(optional)</span></div>
+    <div class="field" style="margin-bottom:0">
+      <label>Exact content for marketing to use</label>
+      <textarea id="f-critical" style="min-height:100px" placeholder="Include dates, times, location, fees, description, offer details, and any specific wording you want used in the campaign…" oninput="FORM.critical_content=this.value">${esc(f.critical_content)}</textarea>
+      <div class="hint">This is the "exact content" field from the paper form — paste everything marketing needs to build the assets</div>
     </div>
   </div>
 
   <div class="card" style="margin-bottom:14px">
-    <div class="sec-label" style="margin-bottom:14px">Dates & Details <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-3)">(all optional)</span></div>
+    <div class="sec-label" style="margin-bottom:14px">Additional Details <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-3)">(all optional)</span></div>
     <div class="g2">
-      <div class="field">
-        <label>End date</label>
-        <input type="date" value="${f.end_date}" onchange="FORM.end_date=this.value">
-      </div>
-      <div class="field">
-        <label>Season</label>
-        <select onchange="FORM.season=this.value" aria-label="Season">
-          <option value="">Select…</option>
-          ${SEASONS.map(s=>`<option${f.season===s?' selected':''}>${s}</option>`).join('')}
-        </select>
-      </div>
       <div class="field">
         <label>Time / Schedule</label>
         <input value="${esc(f.program_time)}" placeholder="e.g. Saturdays 9–11am" oninput="FORM.program_time=this.value">
       </div>
       <div class="field">
-        <label>Location / Facility</label>
-        <input value="${esc(f.location)}" placeholder="e.g. Alcott Center" oninput="FORM.location=this.value">
-      </div>
-      <div class="field">
         <label>Enrollment goal</label>
         <input type="number" value="${f.enrollment_goal}" placeholder="Target # participants" oninput="FORM.enrollment_goal=this.value" min="0">
       </div>
+      <div class="field">
+        <label>Season</label>
+        <select onchange="FORM.season=this.value">
+          <option value="">Select…</option>
+          ${SEASONS.map(s=>`<option${f.season===s?' selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
     </div>
-  </div>
-
-  <div class="card" style="margin-bottom:14px">
-    <div class="sec-label" style="margin-bottom:14px">Message & Content</div>
     <div class="field">
-      <label>Target audience</label>
-      <input value="${esc(f.target_who)}" placeholder="e.g. Families with kids ages 6–12" oninput="FORM.target_who=this.value">
-    </div>
-    <div class="field">
-      <label>Key message</label>
+      <label>Key message / Headline</label>
       <textarea placeholder="The most important thing your audience should know…" oninput="FORM.key_message=this.value">${esc(f.key_message)}</textarea>
       <div class="hint">This becomes the headline for all creative assets</div>
     </div>
     <div class="field">
       <label>Program highlights</label>
-      <textarea placeholder="One highlight per line:&#10;Fun for all skill levels&#10;Equipment provided&#10;Led by certified coaches" style="min-height:88px" oninput="FORM.highlights=this.value">${esc(f.highlights)}</textarea>
+      <textarea placeholder="One highlight per line:&#10;Fun for all skill levels&#10;Equipment provided" style="min-height:80px" oninput="FORM.highlights=this.value">${esc(f.highlights)}</textarea>
     </div>
-    <div class="field">
+    <div class="field" style="margin-bottom:0">
       <label>Notes for marketing</label>
-      <textarea placeholder="Budget limits, approvals needed, past campaigns, context…" oninput="FORM.notes=this.value">${esc(f.notes)}</textarea>
-    </div>
-  </div>
-
-  <div class="card" style="background:var(--surface-2)">
-    <div class="sec-label" style="margin-bottom:10px">Photos, Video & Graphics</div>
-    <div style="display:flex;flex-wrap:wrap;gap:16px">
-      ${[['photos_supplied',"I'll supply photos"],['photos_by_marketing','Marketing to shoot'],['video_needed','Video needed'],['graphics_new','New graphics needed']].map(([k,l])=>`<label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;user-select:none"><input type="checkbox" ${f[k]?'checked':''} onchange="FORM['${k}']=this.checked" style="width:15px;height:15px;accent-color:var(--green)"> ${l}</label>`).join('')}
+      <textarea placeholder="Budget limits, approvals needed, past campaign notes…" oninput="FORM.notes=this.value">${esc(f.notes)}</textarea>
     </div>
   </div>`
 }
@@ -1209,7 +1334,12 @@ function renderTabContent(r,mkt,admin,chs,hi,s){
       ['Time',r.program_time],['Location',r.location],
       ['Reg. deadline',r.registration_deadline?fmt(r.registration_deadline)+(daysUntil(r.registration_deadline)!==null?' ('+( daysUntil(r.registration_deadline)<0?'OVERDUE':daysUntil(r.registration_deadline)+'d away')+')'  :  ''):null],
       ['Enrollment goal',r.enrollment_goal?r.enrollment_goal+' participants':null],
-      ['Goal',r.marketing_goal],['Target audience',r.target_who],
+      ['Goal',r.marketing_goal],
+      ['New or Repeat',r.is_new_or_repeat==='repeat'?'Repeat'+(r.repeat_from_year?' from '+r.repeat_from_year:''):r.is_new_or_repeat==='new'?'New':null],
+      ['Marketing Objective',r.marketing_objective?r.marketing_objective.charAt(0).toUpperCase()+r.marketing_objective.slice(1):null],
+      ['Target Gender',r.target_gender&&r.target_gender!=='all'?r.target_gender.charAt(0).toUpperCase()+r.target_gender.slice(1):null],
+      ['Target Ages',(r.target_ages||[]).length?(r.target_ages||[]).join(', '):null],
+      ['Target audience',r.target_who],
     ].filter(([,v])=>v)
 
     return`
@@ -1219,9 +1349,12 @@ function renderTabContent(r,mkt,admin,chs,hi,s){
         <div style="font-size:14px;color:var(--text)">${esc(String(v))}</div>
       </div>`).join('')}
     </div>
+    ${r.critical_content?`<div style="background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--amber);margin-bottom:5px">Critical Content</div><div style="font-size:13px;color:var(--text);line-height:1.6;white-space:pre-wrap">${esc(r.critical_content)}</div></div>`:''}
     ${r.key_message?`<div style="background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--blue);margin-bottom:5px">Key Message</div><div style="font-size:14px;font-weight:500;color:var(--text)">${esc(r.key_message)}</div></div>`:''}
     ${hi.length?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:8px">Highlights</div>${hi.map(h=>`<div style="display:flex;align-items:flex-start;gap:7px;font-size:13px;margin-bottom:5px;color:var(--text)"><span style="color:var(--green);font-weight:700;flex-shrink:0">✓</span>${esc(h)}</div>`).join('')}</div>`:''}
-    ${chs.length?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:8px">Requested Channels</div><div style="display:flex;flex-wrap:wrap;gap:6px">${chs.map(cv=>{const ch=CHS.find(x=>x.v===cv);return`<span class="tag">${ch?.i||''} ${ch?.l||cv}</span>`}).join('')}</div></div>`:''}
+    ${r.channels_v2&&Object.values(r.channels_v2).some(a=>a&&a.length)?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:8px">Requested Channels</div>
+      ${Object.entries(r.channels_v2||{}).filter(([,a])=>a&&a.length).map(([cat,arr])=>`<div style="margin-bottom:6px"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3)">${CH_LABELS[cat]||cat}:</span> <span style="font-size:12px;color:var(--text-2)">${arr.map(v=>(CH_DEFS[cat]||[]).find(x=>x.v===v)?.l||v).join(', ')}</span></div>`).join('')}
+    </div>`:chs.length?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:8px">Requested Channels</div><div style="display:flex;flex-wrap:wrap;gap:6px">${chs.map(cv=>{const ch=CHS.find(x=>x.v===cv);return`<span class="tag">${ch?.i||''} ${ch?.l||cv}</span>`}).join('')}</div></div>`:''}
     ${r.notes?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:5px">Notes</div><div style="font-size:13px;color:var(--text-2);line-height:1.5">${esc(r.notes)}</div></div>`:''}
 
     ${mkt?`
@@ -1898,8 +2031,8 @@ document.addEventListener('click',function(e){
     return
   }
 
-  const chBtn=e.target.closest('[data-ch]')
-  if(chBtn&&FORM){toggleCh(chBtn.dataset.ch);return}
+  const chBtn=e.target.closest('[data-ch2-cat]')
+  if(chBtn&&FORM){toggleCh2(chBtn.dataset.ch2Cat,chBtn.dataset.ch2V);return}
 
   if(e.target.closest('#bulk-clear-btn')){SELECTED=new Set();renderView();return}
   if(e.target.closest('#form-back-btn')){FORM_STEP=1;renderView();return}
