@@ -482,7 +482,15 @@ function blankForm(){
     // content
     target_who:'',key_message:'',highlights:'',notes:'',
     // structured channels (new)
-    channels_v2:{print:[],digital:[],social:[],tv:[],other:[]},
+    channels_v2:{print:[],digital:[],social:[],tv:[],other:[],display:[]},
+    // photo / video details
+    photo_shoot_date:'',photo_shoot_location:'',photo_supplied_by:'',
+    // graphics
+    graphics_by:'',graphics_due_date:'',
+    // social media scheduling
+    social_first_post_date:'',social_second_post:false,social_second_post_date:'',
+    // community calendar
+    community_calendar:false,community_calendar_date:'',
   }
 }
 
@@ -497,12 +505,16 @@ const CH_DEFS = {
     {v:'template',l:'Template (8½ × 11")'},
     {v:'print_other',l:'Other Print'},
   ],
+  display:[
+    {v:'alcott_display_case',l:'Alcott Display Case'},
+  ],
   digital:[
     {v:'website_slider',l:'Website Slider (Home Page)'},
     {v:'email_blast_park',l:'Email Blast — Park District'},
     {v:'email_blast_fc',l:'Email Blast — Fitness News'},
     {v:'digital_road_sign',l:'Digital Road Sign'},
     {v:'geofencing',l:'Geofencing Campaign'},
+    {v:'community_calendar',l:'Community Calendar'},
   ],
   social:[
     {v:'facebook',l:'Facebook'},
@@ -517,18 +529,25 @@ const CH_DEFS = {
     {v:'tv_golf_dome',l:'Golf Dome (720×1280)'},
     {v:'tv_raupp',l:'Raupp Museum (1920×1080)'},
   ],
-  other:[
-    {v:'photos',l:'Photos needed'},
-    {v:'video',l:'Video needed'},
-  ]
+  photos:[
+    {v:'photos_marketing',l:'Photos — Marketing shoots'},
+    {v:'photos_staff',l:'Photos — Supplied by staff'},
+  ],
+  video:[
+    {v:'video_needed',l:'Video needed'},
+  ],
+  graphics:[
+    {v:'graphics_marketing',l:'Graphics — Created by Marketing'},
+    {v:'graphics_staff',l:'Graphics — Created by Rec staff'},
+  ],
 }
-const CH_LABELS = {print:'Print',digital:'Digital',social:'Social Media',tv:'TV Screens',other:'Photos & Video'}
-const CH_ICONS  = {print:'🖨',digital:'💻',social:'📱',tv:'📺',other:'📷'}
+const CH_LABELS = {print:'Print',display:'Display',digital:'Digital',social:'Social Media',tv:'TV Screens',photos:'Photos',video:'Video',graphics:'Graphics'}
+const CH_ICONS  = {print:'🖨',display:'🏛',digital:'💻',social:'📱',tv:'📺',photos:'📷',video:'🎥',graphics:'🎨'}
 
 function hasCh(f,cat,v){return (f.channels_v2&&f.channels_v2[cat]||[]).includes(v)}
 function toggleCh2(cat,v){
   if(!FORM)return
-  if(!FORM.channels_v2)FORM.channels_v2={print:[],digital:[],social:[],tv:[],other:[]}
+  if(!FORM.channels_v2)FORM.channels_v2={print:[],display:[],digital:[],social:[],tv:[],photos:[],video:[],graphics:[],other:[]}
   const arr=FORM.channels_v2[cat]||[]
   FORM.channels_v2[cat]=arr.includes(v)?arr.filter(x=>x!==v):[...arr,v]
   // Update just this chip visually
@@ -598,7 +617,7 @@ async function doSignOut(){
 
 // ── DATA ─────────────────────────────────────────────────────────
 // Explicit column selection — avoids fetching unused fields, cuts payload
-const REQ_COLS='id,created_at,request_number,program_name,program_type,start_date,end_date,program_time,location,staff_name,registration_deadline,enrollment_goal,season,department,marketing_goal,priority_score,urgency_level,impact_level,reach_level,target_who,key_message,highlights,channels,channels_v2,is_new_or_repeat,repeat_from_year,marketing_objective,target_gender,target_ages,critical_content,photos_supplied,photos_by_marketing,video_needed,graphics_new,notes,status,marketing_notes,assigned_to_name,submitted_by_id,clarification_needed,clarification_note,approved_at,approved_by,completed_at,feedback_rating,feedback_note,is_archived'
+const REQ_COLS='id,created_at,request_number,program_name,program_type,start_date,end_date,program_time,location,staff_name,registration_deadline,enrollment_goal,season,department,marketing_goal,priority_score,urgency_level,impact_level,reach_level,target_who,key_message,highlights,channels,channels_v2,is_new_or_repeat,repeat_from_year,marketing_objective,target_gender,target_ages,critical_content,photo_shoot_date,photo_shoot_location,photo_supplied_by,graphics_by,graphics_due_date,social_first_post_date,social_second_post,social_second_post_date,community_calendar,community_calendar_date,photos_supplied,photos_by_marketing,video_needed,graphics_new,notes,status,marketing_notes,assigned_to_name,submitted_by_id,clarification_needed,clarification_note,approved_at,approved_by,completed_at,feedback_rating,feedback_note,is_archived'
 
 async function loadReqs(){
   let q2=SB.from('marketing_requests').select(REQ_COLS).order('created_at',{ascending:false})
@@ -646,7 +665,17 @@ async function submitRequest(){
     key_message:f.key_message||null,
     highlights:f.highlights?f.highlights.split('\n').map(s=>s.trim()).filter(Boolean):[],
     channels:[],  // legacy — kept for backward compat
-    channels_v2:f.channels_v2||{print:[],digital:[],social:[],tv:[],other:[]},
+    channels_v2:f.channels_v2||{print:[],display:[],digital:[],social:[],tv:[],photos:[],video:[],graphics:[],other:[]},
+    photo_shoot_date:f.photo_shoot_date||null,
+    photo_shoot_location:f.photo_shoot_location||null,
+    photo_supplied_by:f.photo_supplied_by||null,
+    graphics_by:f.graphics_by||null,
+    graphics_due_date:f.graphics_due_date||null,
+    social_first_post_date:f.social_first_post_date||null,
+    social_second_post:!!f.social_second_post,
+    social_second_post_date:f.social_second_post_date||null,
+    community_calendar:!!f.community_calendar,
+    community_calendar_date:f.community_calendar_date||null,
     is_new_or_repeat:f.is_new_or_repeat||null,
     repeat_from_year:f.repeat_from_year||null,
     marketing_objective:f.marketing_objective||null,
@@ -1136,11 +1165,17 @@ function renderFormS1(f,s){
 }
 
 function renderFormS2(f){
-  const cv=f.channels_v2||{print:[],digital:[],social:[],tv:[],other:[]}
+  const cv=f.channels_v2||{print:[],display:[],digital:[],social:[],tv:[],photos:[],video:[],graphics:[],other:[]}
+  const hasSocial=(cv.social||[]).length>0
+  const hasPhotos=(cv.photos||[]).length>0
+  const hasVideo=(cv.video||[]).length>0
+  const hasGraphics=(cv.graphics||[]).length>0
+  const hasDigital=(cv.digital||[]).includes('community_calendar')
+
   return`
   <div class="card" style="margin-bottom:14px">
     <div class="sec-label" style="margin-bottom:4px">Requested Channels <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-3)">(select all that apply)</span></div>
-    <div style="font-size:12px;color:var(--text-2);margin-bottom:16px">Check everything you'd like — marketing will confirm what's feasible given the timeline.</div>
+    <div style="font-size:12px;color:var(--text-2);margin-bottom:16px">Check everything you'd like — marketing will confirm what's feasible given your timeline.</div>
     ${Object.entries(CH_DEFS).map(([cat,items])=>`
     <div style="margin-bottom:18px">
       <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px">
@@ -1148,11 +1183,60 @@ function renderFormS2(f){
         <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-2)">${CH_LABELS[cat]}</span>
         ${(cv[cat]||[]).length>0?`<span style="font-size:11px;background:var(--accent);color:#fff;border-radius:20px;padding:1px 7px;font-weight:600">${(cv[cat]||[]).length}</span>`:''}
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px">
-        ${items.map(ch=>{const on=(cv[cat]||[]).includes(ch.v);return`<div class="chip${on?' on':''}" data-ch2-cat="${cat}" data-ch2-v="${ch.v}" role="checkbox" aria-checked="${on}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCh2('${cat}','${ch.v}')}">
-          ${ch.l}
-        </div>`}).join('')}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px">
+        ${items.map(ch=>{const on=(cv[cat]||[]).includes(ch.v);return`<div class="chip${on?' on':''}" data-ch2-cat="${cat}" data-ch2-v="${ch.v}" role="checkbox" aria-checked="${on}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCh2('${cat}','${ch.v}')}">${ch.l}</div>`}).join('')}
       </div>
+
+      ${cat==='social'&&hasSocial?`
+      <div style="margin-top:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:10px">Social Media Scheduling</div>
+        <div class="g2">
+          <div class="field" style="margin-bottom:0">
+            <label>First post date</label>
+            <input type="date" value="${f.social_first_post_date||''}" onchange="FORM.social_first_post_date=this.value">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;user-select:none;margin-top:20px">
+              <input type="checkbox" ${f.social_second_post?'checked':''} onchange="FORM.social_second_post=this.checked;renderView()" style="width:15px;height:15px;accent-color:var(--accent)">
+              Second post needed?
+            </label>
+            ${f.social_second_post?`<div class="field" style="margin-bottom:0"><label>Second post date</label><input type="date" value="${f.social_second_post_date||''}" onchange="FORM.social_second_post_date=this.value"></div>`:''}
+          </div>
+        </div>
+      </div>`:''}
+
+      ${cat==='digital'&&hasDigital?`
+      <div style="margin-top:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:10px">Community Calendar</div>
+        <div class="field" style="margin-bottom:0">
+          <label>Preferred listing date</label>
+          <input type="date" value="${f.community_calendar_date||''}" onchange="FORM.community_calendar_date=this.value">
+        </div>
+      </div>`:''}
+
+      ${cat==='photos'&&hasPhotos?`
+      <div style="margin-top:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:10px">Photo Details</div>
+        <div class="g2">
+          <div class="field" style="margin-bottom:0">
+            <label>Shoot date</label>
+            <input type="date" value="${f.photo_shoot_date||''}" onchange="FORM.photo_shoot_date=this.value">
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label>Shoot location</label>
+            <input value="${esc(f.photo_shoot_location)}" placeholder="e.g. Fitness Floor" oninput="FORM.photo_shoot_location=this.value">
+          </div>
+        </div>
+      </div>`:''}
+
+      ${cat==='graphics'&&hasGraphics?`
+      <div style="margin-top:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:10px">Graphics Details</div>
+        <div class="field" style="margin-bottom:0">
+          <label>Due date for graphics</label>
+          <input type="date" value="${f.graphics_due_date||''}" onchange="FORM.graphics_due_date=this.value">
+        </div>
+      </div>`:''}
     </div>`).join('')}
   </div>
 
@@ -1161,7 +1245,7 @@ function renderFormS2(f){
     <div class="field" style="margin-bottom:0">
       <label>Exact content for marketing to use</label>
       <textarea id="f-critical" style="min-height:100px" placeholder="Include dates, times, location, fees, description, offer details, and any specific wording you want used in the campaign…" oninput="FORM.critical_content=this.value">${esc(f.critical_content)}</textarea>
-      <div class="hint">This is the "exact content" field from the paper form — paste everything marketing needs to build the assets</div>
+      <div class="hint">Paste everything marketing needs — dates, times, fees, specific wording. The more detail, the better.</div>
     </div>
   </div>
 
@@ -1355,6 +1439,10 @@ function renderTabContent(r,mkt,admin,chs,hi,s){
     ${r.channels_v2&&Object.values(r.channels_v2).some(a=>a&&a.length)?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:8px">Requested Channels</div>
       ${Object.entries(r.channels_v2||{}).filter(([,a])=>a&&a.length).map(([cat,arr])=>`<div style="margin-bottom:6px"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3)">${CH_LABELS[cat]||cat}:</span> <span style="font-size:12px;color:var(--text-2)">${arr.map(v=>(CH_DEFS[cat]||[]).find(x=>x.v===v)?.l||v).join(', ')}</span></div>`).join('')}
     </div>`:chs.length?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:8px">Requested Channels</div><div style="display:flex;flex-wrap:wrap;gap:6px">${chs.map(cv=>{const ch=CHS.find(x=>x.v===cv);return`<span class="tag">${ch?.i||''} ${ch?.l||cv}</span>`}).join('')}</div></div>`:''}
+    ${(r.photo_shoot_date||r.photo_shoot_location||r.photo_supplied_by)?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:5px">Photo Details</div><div style="font-size:13px;color:var(--text-2)">${[r.photo_shoot_date?"Shoot: "+fmt(r.photo_shoot_date):"",r.photo_shoot_location?"Location: "+esc(r.photo_shoot_location):"",r.photo_supplied_by?"Supplied by: "+r.photo_supplied_by:""].filter(Boolean).join(" · ")}</div></div>`:""}
+    ${(r.graphics_by||r.graphics_due_date)?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:5px">Graphics</div><div style="font-size:13px;color:var(--text-2)">${[r.graphics_by?"By: "+r.graphics_by:"",r.graphics_due_date?"Due: "+fmt(r.graphics_due_date):""].filter(Boolean).join(" · ")}</div></div>`:""}
+    ${r.social_first_post_date?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:5px">Social Scheduling</div><div style="font-size:13px;color:var(--text-2)">First post: ${fmt(r.social_first_post_date)}${r.social_second_post&&r.social_second_post_date?" · Second post: "+fmt(r.social_second_post_date):r.social_second_post?" · Second post requested":""}</div></div>`:""}
+    ${r.community_calendar?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:5px">Community Calendar</div><div style="font-size:13px;color:var(--text-2)">${r.community_calendar_date?"Preferred date: "+fmt(r.community_calendar_date):"Requested"}</div></div>`:""}
     ${r.notes?`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:5px">Notes</div><div style="font-size:13px;color:var(--text-2);line-height:1.5">${esc(r.notes)}</div></div>`:''}
 
     ${mkt?`
