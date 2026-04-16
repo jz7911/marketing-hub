@@ -396,6 +396,29 @@ const SB = supabase.createClient(
 const SL = {new:'Submitted',reviewing:'Being Reviewed',active:'In Progress',done:'Complete'}
 const SB2 = {new:'badge-new',reviewing:'badge-reviewing',active:'badge-active',done:'badge-done'}
 const STATUSES = ['new','reviewing','active','done']
+// ── NOTIFICATIONS ─────────────────────────────────────────────────
+const EDGE_URL = 'https://bwhjbxphhfjxfaqhtlay.supabase.co/functions/v1/send-notification'
+
+async function notify(event, data){
+  try {
+    fetch(EDGE_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({event, data})
+    }).catch(e=>console.warn('Notify failed:', e))
+  } catch(e) {
+    console.warn('Notify error:', e)
+  }
+  // Always fire-and-forget — never block the UI
+}
+
+// Helper to look up staff email for a request
+async function getStaffEmail(submittedById){
+  if(!submittedById) return null
+  const {data} = await SB.from('mkt_users').select('email,full_name').eq('id',submittedById).maybeSingle()
+  return data
+}
+
 const GOALS = [
   {v:'Grow participation',d:'Increase enrollment & reduce barriers'},
   {v:'Financial sustainability',d:'Revenue & cost recovery'},
@@ -775,6 +798,15 @@ async function submitRequest(){
   // Non-blocking side effects
   SB.from('mkt_status_history').insert([{request_id:data.id,changed_by_name:USER.full_name,changed_by_role:USER.role,new_status:'new',note:'Submitted'}])
   SB.from('mkt_notifications').insert([{request_id:data.id,recipient_id:USER.id,type:'submitted',message:'Your request "'+data.program_name+'" was submitted',read:false}])
+  // Email notification to marketing team
+  notify('request_submitted', {
+    request_id:data.id,
+    program_name:data.program_name,
+    staff_name:USER.full_name,
+    department:data.department,
+    marketing_goal:data.marketing_goal,
+    priority_score:data.priority_score||0,
+  })
   LAST_SUBMITTED=data
   FORM=null; FORM_STEP=1
   ALL_REQS.unshift(data)
@@ -791,6 +823,18 @@ async function changeStatus(id,newStatus,note=''){
   SB.from('mkt_status_history').insert([{request_id:id,changed_by_name:USER.full_name,changed_by_role:USER.role,old_status:req?.status,new_status:newStatus,note:note||'Status updated'}])
   if(req?.submitted_by_id&&req.submitted_by_id!==USER.id){
     SB.from('mkt_notifications').insert([{request_id:id,recipient_id:req.submitted_by_id,type:'status_change',message:'"'+req.program_name+'" is now: '+SL[newStatus],read:false}])
+    // Email the staff member
+    getStaffEmail(req.submitted_by_id).then(staff=>{
+      if(staff) notify('status_changed',{
+        request_id:id,
+        program_name:req.program_name,
+        old_status:req.status,
+        new_status:newStatus,
+        changed_by_name:USER.full_name,
+        staff_email:staff.email,
+        staff_name:staff.full_name,
+      })
+    })
   }
   const r=getReq(id)
   if(r){r.status=newStatus;Object.assign(r,extra)}
@@ -1633,11 +1677,11 @@ function renderTabContent(r,mkt,admin,chs,hi,s){
       <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;background:var(--surface);user-select:none">
         <input type="checkbox" id="clar-chk" ${r.clarification_needed?'checked':''} onchange="toggleClar('${r.id}',this.checked)"> Flag — needs staff info
       </label>
-      ${r.clarification_needed?`<input id="clar-note" value="${esc(r.clarification_note||'')}" placeholder="What do you need from staff?" style="flex:1;min-width:200px;padding:6px 10px;border:1.5px solid var(--amber-border);border-radius:6px;font-size:13px;outline:none;background:var(--amber-bg)" onblur="saveClarNote('${r.id}',this.value)" aria-label="Clarification note">`:''}
+      ${r.clarification_needed?`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1"><input id="clar-note" value="${esc(r.clarification_note||'')}" placeholder="What do you need from staff?" style="flex:1;min-width:160px;padding:6px 10px;border:1.5px solid var(--amber-border);border-radius:6px;font-size:13px;outline:none;background:var(--amber-bg)" aria-label="Clarification note"><button class="btn btn-sm btn-amber" onclick="saveClarNoteBtn('${r.id}')" title="Save note">Save Note</button></div>`:""}
     </div>
     ${r.assigned_to_name!==undefined?`<div style="margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><label style="font-size:12px;font-weight:600;color:var(--text-2)">Assigned to:</label><input id="assign-input" value="${esc(r.assigned_to_name||'')}" placeholder="Team member name" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;outline:none;flex:1;max-width:200px" aria-label="Assign to"><button class="btn btn-sm" onclick="saveAssigned('${r.id}')">Update</button></div>`:''}
     `:`${r.marketing_notes?`<div class="sep"></div><div class="sec-label">Note from Marketing</div><div style="font-size:14px;line-height:1.5;color:var(--text)">${esc(r.marketing_notes)}</div>`:''}`}
-    ${!mkt&&r.status==='done'&&!r.feedback_rating?renderFeedbackForm(r):''}`
+    ${!mkt&&r.status==='done'?renderFeedbackForm(r):''}`
   }
 
   if(DETAIL_TAB==='messages'){
@@ -1653,6 +1697,7 @@ function renderTabContent(r,mkt,admin,chs,hi,s){
             <span class="badge badge-${c.author_role}" style="font-size:10px">${c.author_role}</span>
             ${c.is_internal?'<span class="badge badge-reviewing" style="font-size:10px">Internal only</span>':''}
             <span style="margin-left:auto;font-size:10px">${fmt(c.created_at)}</span>
+            ${(admin||c.author_name===USER?.full_name)?`<button onclick="deleteComment('${c.id}','${r.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-3);font-size:12px;padding:0 2px;line-height:1" title="Delete message" aria-label="Delete this message">✕</button>`:''}
           </div>
           <div class="comment-body">${esc(c.body)}</div>
           ${c.attachment_url?('<div style="margin-top:8px"><a href="'+c.attachment_url+'" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--accent);text-decoration:none;font-weight:500">📎 '+esc(c.attachment_name||'Attachment')+'</a></div>'):''}
@@ -1680,9 +1725,13 @@ function renderTabContent(r,mkt,admin,chs,hi,s){
       ${DELIVS.length===0?`<div style="text-align:center;padding:20px;color:var(--text-3);font-size:13px;font-style:italic">${mkt?'Add deliverables below.':'Marketing will add deliverables here.'}</div>`:''}
       ${DELIVS.map(d=>`<div class="deliv${d.completed?' done-d':''}" role="listitem">
         <input type="checkbox" ${d.completed?'checked':''} ${!mkt?'disabled':''} onchange="toggleDeliv('${d.id}',this.checked)" aria-label="${esc(d.label)}">
-        <span class="deliv-lbl${d.completed?' struck':''}">${esc(d.label)}</span>
+        <span class="deliv-lbl${d.completed?' struck':''}" style="flex:1">${esc(d.label)}</span>
         ${d.completed_by?`<span style="font-size:11px;color:var(--green);font-weight:500">✓ ${esc(d.completed_by)}</span>`:''}
         ${d.due_date?`<span style="font-size:11px;color:var(--text-3)">${fmt(d.due_date)}</span>`:''}
+        ${mkt?`<div style="display:flex;gap:3px;margin-left:4px;flex-shrink:0">
+          <button class="btn btn-xs btn-ghost btn-icon" onclick="editDelivInline('${d.id}','${esc(d.label).replace(/'/g,"\\'")}','${d.due_date||''}')" title="Edit" aria-label="Edit deliverable">✏️</button>
+          <button class="btn btn-xs btn-red" style="padding:3px 7px;font-size:11px" onclick="deleteDeliv('${d.id}')" title="Delete deliverable" aria-label="Delete deliverable">✕</button>
+        </div>`:''}
       </div>`).join('')}
     </div>
     ${mkt?`<div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid var(--border-light);padding-top:12px;flex-wrap:wrap">
@@ -1707,15 +1756,18 @@ function renderTabContent(r,mkt,admin,chs,hi,s){
 }
 
 function renderFeedbackForm(r){
+  // Pre-load existing rating into FB_RATING if not yet set by user interaction
+  if(!FB_RATING&&r.feedback_rating) FB_RATING=r.feedback_rating
+  const hasRating=!!r.feedback_rating
   return`
   <div class="sep"></div>
-  <div class="sec-label" style="margin-bottom:8px">Rate this campaign</div>
-  <div style="font-size:12px;color:var(--text-2);margin-bottom:12px">How well did the marketing support this program?</div>
+  <div class="sec-label" style="margin-bottom:4px">${hasRating?'Your Campaign Rating':'Rate this campaign'}</div>
+  <div style="font-size:12px;color:var(--text-2);margin-bottom:12px">${hasRating?'Update your rating anytime.':'How well did the marketing support this program?'}</div>
   <div style="display:flex;gap:4px;margin-bottom:12px" id="stars" role="group" aria-label="Rating stars">
-    ${[1,2,3,4,5].map(n=>`<button style="font-size:26px;background:none;border:none;cursor:pointer;opacity:${FB_RATING>=n?1:.25};transition:opacity .1s;padding:2px" onclick="FB_RATING=${n};updateStars()" aria-label="Rate ${n} star${n>1?'s':''}" aria-pressed="${FB_RATING>=n}">⭐</button>`).join('')}
+    ${[1,2,3,4,5].map(n=>`<button style="font-size:26px;background:none;border:none;cursor:pointer;opacity:${FB_RATING>=n?1:.2};transition:opacity .1s;padding:2px" onclick="FB_RATING=${n};updateStars()" aria-label="Rate ${n} star${n>1?'s':''}" aria-pressed="${FB_RATING>=n}">⭐</button>`).join('')}
   </div>
-  <textarea id="fb-note" placeholder="Optional: How did it go? Any improvements for next time?" style="width:100%;min-height:68px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;outline:none;margin-bottom:10px;resize:vertical" aria-label="Feedback note"></textarea>
-  <button class="btn btn-primary btn-sm" onclick="submitFeedback('${r.id}')">Submit Feedback</button>`
+  <textarea id="fb-note" placeholder="Optional: How did it go? Any improvements for next time?" style="width:100%;min-height:68px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;outline:none;margin-bottom:10px;resize:vertical" aria-label="Feedback note">${esc(r.feedback_note||'')}</textarea>
+  <button class="btn btn-primary btn-sm" onclick="submitFeedback('${r.id}')">${hasRating?'Update Rating':'Submit Rating'}</button>`
 }
 
 // ── QUEUE ──────────────────────────────────────────────────────────
@@ -2357,12 +2409,106 @@ async function saveAssigned(id){
 async function toggleClar(id,checked){
   await SB.from('marketing_requests').update({clarification_needed:checked}).eq('id',id)
   const r=getReq(id);if(r)r.clarification_needed=checked
+  // Email staff if flagging (not unflagging)
+  if(checked&&r?.submitted_by_id){
+    getStaffEmail(r.submitted_by_id).then(staff=>{
+      if(staff) notify('clarification_needed',{
+        request_id:id,
+        program_name:r.program_name,
+        clarification_note:r.clarification_note||'',
+        staff_email:staff.email,
+        staff_name:staff.full_name,
+      })
+    })
+  }
   await loadDetail(id); VIEW='detail'; showApp()
 }
 
 async function saveClarNote(id,note){
   await SB.from('marketing_requests').update({clarification_note:note}).eq('id',id)
   const r=getReq(id);if(r)r.clarification_note=note
+}
+function saveClarNoteBtn(id){
+  const note=q('clar-note')?.value||''
+  saveClarNote(id,note)
+  toast('Note saved')
+  // Re-send clarification email with updated note
+  const r=getReq(id)
+  if(r?.clarification_needed&&r?.submitted_by_id){
+    getStaffEmail(r.submitted_by_id).then(staff=>{
+      if(staff) notify('clarification_needed',{
+        request_id:id,
+        program_name:r.program_name,
+        clarification_note:note,
+        staff_email:staff.email,
+        staff_name:staff.full_name,
+      })
+    })
+  }
+}
+
+async function deleteComment(commentId, reqId){
+  showConfirmModal(
+    'Delete Message',
+    'Delete this message? This cannot be undone.',
+    'Delete',
+    async()=>{
+      const {error}=await SB.from('mkt_comments').delete().eq('id',commentId)
+      if(error){toast('Error: '+error.message,'err');return}
+      await loadDetail(reqId)
+      switchTab('messages')
+      toast('Message deleted')
+    }
+  )
+}
+
+async function deleteDeliv(id){
+  showConfirmModal(
+    'Delete Deliverable',
+    'Remove this deliverable from the list?',
+    'Delete',
+    async()=>{
+      const {error}=await SB.from('mkt_deliverables').delete().eq('id',id)
+      if(error){toast('Error: '+error.message,'err');return}
+      await loadDetail(SEL_ID)
+      switchTab('deliverables')
+      toast('Deliverable removed')
+    }
+  )
+}
+
+function editDelivInline(id, currentLabel, currentDate){
+  // Replace the deliverable list with an edit form for this item
+  const list=q('deliv-list')
+  if(!list)return
+  // Find the deliverable row and replace it temporarily
+  const items=list.querySelectorAll('[role="listitem"]')
+  // Find by iterating — match by label text
+  let targetRow=null
+  items.forEach(row=>{
+    const lbl=row.querySelector('.deliv-lbl')
+    if(lbl&&lbl.textContent.trim()===currentLabel) targetRow=row
+  })
+  if(!targetRow)return
+  const orig=targetRow.innerHTML
+  targetRow.innerHTML=`
+    <input type="text" id="edit-deliv-label" value="${esc(currentLabel)}" style="flex:1;padding:5px 8px;border:1.5px solid var(--accent);border-radius:5px;font-size:13px;outline:none">
+    <input type="date" id="edit-deliv-date" value="${currentDate}" style="width:130px;padding:5px 8px;border:1.5px solid var(--border);border-radius:5px;font-size:13px;outline:none">
+    <button class="btn btn-xs btn-primary" onclick="saveDelivEdit('${id}')">Save</button>
+    <button class="btn btn-xs btn-ghost" onclick="switchTab('deliverables')">Cancel</button>
+  `
+  q('edit-deliv-label')?.focus()
+}
+
+async function saveDelivEdit(id){
+  const label=q('edit-deliv-label')?.value?.trim()
+  const date=q('edit-deliv-date')?.value||null
+  if(!label){toast('Deliverable label cannot be empty','err');return}
+  const {error}=await SB.from('mkt_deliverables').update({label,due_date:date||null}).eq('id',id)
+  if(error){toast('Error: '+error.message,'err');return}
+  await loadDetail(SEL_ID)
+  switchTab('deliverables')
+  toast('Deliverable updated')
 }
 
 async function sendMsg(id){
@@ -2387,6 +2533,40 @@ async function sendMsg(id){
   const extra=fileUrl?{attachment_url:fileUrl,attachment_name:fileName}:{}
   const {error}=await SB.from('mkt_comments').insert([{request_id:id,author_name:USER.full_name,author_role:USER.role,body:msgBody,is_internal:internal,...extra}])
   if(error){toast('Error: '+error.message,'err');return}
+  // Email the other party (not internal notes)
+  if(!internal){
+    const req=getReq(id)
+    if(req){
+      const isStaffSending=USER.role==='staff'
+      if(isStaffSending){
+        // Staff sent message → email marketing team
+        notify('message_sent',{
+          request_id:id,
+          program_name:req.program_name,
+          author_name:USER.full_name,
+          author_role:USER.role,
+          message_preview:msgBody,
+          recipient_email:'jjohns@bgparks.org', // marketing team lead; edge fn also notifies all mkt users
+          recipient_name:'Marketing Team',
+          is_internal:false,
+        })
+      } else if(req.submitted_by_id){
+        // Marketing sent message → email the staff member
+        getStaffEmail(req.submitted_by_id).then(staff=>{
+          if(staff&&staff.email!==USER.email) notify('message_sent',{
+            request_id:id,
+            program_name:req.program_name,
+            author_name:USER.full_name,
+            author_role:USER.role,
+            message_preview:msgBody,
+            recipient_email:staff.email,
+            recipient_name:staff.full_name,
+            is_internal:false,
+          })
+        })
+      }
+    }
+  }
   await loadDetail(id); switchTab('messages'); toast('Message sent')
 }
 
@@ -2411,6 +2591,8 @@ async function submitFeedback(id){
   const note=q('fb-note')?.value||''
   await SB.from('marketing_requests').update({feedback_rating:FB_RATING,feedback_note:note}).eq('id',id)
   const r=getReq(id);if(r){r.feedback_rating=FB_RATING;r.feedback_note=note}
+  const req=getReq(id)
+  if(req) notify('feedback_submitted',{request_id:id,program_name:req.program_name,staff_name:USER.full_name,rating:FB_RATING,note:note})
   FB_RATING=0; toast('Feedback submitted — thank you! 🙏','ok','⭐'); switchTab('brief')
 }
 
