@@ -384,6 +384,9 @@ img{max-width:100%}
 <script>
 'use strict'
 // ── CONFIG ──────────────────────────────────────────────────────
+// Note: The anon key below is intentionally public — it's designed to be
+// embedded in client-side apps. Security is enforced by Row Level Security
+// policies on the database, not by hiding this key.
 const SB = supabase.createClient(
   'https://bwhjbxphhfjxfaqhtlay.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3aGpieHBoaGZqeGZhcWh0bGF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2NjkyMjMsImV4cCI6MjA5MTI0NTIyM30.MOF7y4G7ZuIx8oTRO9TEEwyRy2zZl1pMk2dpdFvUtDw'
@@ -544,6 +547,21 @@ const CH_DEFS = {
 const CH_LABELS = {print:'Print',display:'Display',digital:'Digital',social:'Social Media',tv:'TV Screens',photos:'Photos',video:'Video',graphics:'Graphics'}
 const CH_ICONS  = {print:'🖨',display:'🏛',digital:'💻',social:'📱',tv:'📺',photos:'📷',video:'🎥',graphics:'🎨'}
 
+function syncCriticalContent(){
+  if(!FORM._cc)return
+  const cc=FORM._cc
+  const parts=[]
+  if(cc['cc-dates'])parts.push('Dates/Times: '+cc['cc-dates'])
+  if(cc['cc-location'])parts.push('Location: '+cc['cc-location'])
+  if(cc['cc-fees'])parts.push('Fees: '+cc['cc-fees'])
+  if(cc['cc-desc'])parts.push('Description: '+cc['cc-desc'])
+  if(cc['cc-offer'])parts.push('Offer: '+cc['cc-offer'])
+  if(cc['cc-contact'])parts.push('Contact: '+cc['cc-contact'])
+  const built=parts.join('\n')
+  FORM.critical_content=built
+  const ta=q('f-critical');if(ta)ta.value=built
+}
+
 function hasCh(f,cat,v){return (f.channels_v2&&f.channels_v2[cat]||[]).includes(v)}
 function toggleCh2(cat,v){
   if(!FORM)return
@@ -590,6 +608,13 @@ async function loadUser(authId){
   USER=data
   if(!USER){showNoAccess();return}
   SB.from('mkt_users').update({last_seen_at:new Date().toISOString()}).eq('id',USER.id)
+  // Check for existing draft and unread notifications
+  const [{data:draft},{data:notifs}] = await Promise.all([
+    SB.from('mkt_drafts').select('id').eq('user_id',USER.id).maybeSingle(),
+    SB.from('mkt_notifications').select('id',{count:'exact',head:true}).eq('recipient_id',USER.id).eq('read',false)
+  ])
+  if(draft) DRAFT_ID=draft.id
+  NOTIF_COUNT=notifs||0
   await loadReqs()
   showApp()
 }
@@ -610,6 +635,50 @@ async function doLogin(){
 }
 function showLoginErr(msg){const el=q('li-err');if(el){el.textContent=msg;el.style.display='flex'}}
 
+async function openNotifPanel(){
+  // Mark notifications as read and show a quick panel
+  const {data:notifs}=await SB.from('mkt_notifications').select('*').eq('recipient_id',USER.id).order('created_at',{ascending:false}).limit(20)
+  const unread=(notifs||[]).filter(n=>!n.read)
+  if(unread.length){
+    const ids=unread.map(n=>n.id)
+    SB.from('mkt_notifications').update({read:true}).in('id',ids)
+    NOTIF_COUNT=0
+    // Update badge
+    const badge=q('notif-btn')?.querySelector('span')
+    if(badge)badge.remove()
+  }
+  let m=q('notif-panel')
+  if(!m){m=document.createElement('div');m.id='notif-panel';m.className='modal-bg';m.setAttribute('role','dialog');document.body.appendChild(m)}
+  m.innerHTML=`<div class="modal" style="max-width:460px">
+    <div class="modal-hd"><div class="modal-title">🔔 Notifications</div><button class="modal-x" onclick="closeNotifPanel()" aria-label="Close">×</button></div>
+    <div class="modal-bd" style="padding:0">
+      ${!notifs||!notifs.length?'<div style="padding:28px;text-align:center;color:var(--text-3);font-style:italic">No notifications yet</div>':''}
+      ${(notifs||[]).map(n=>`<div style="padding:12px 18px;border-bottom:1px solid var(--border-light);display:flex;gap:10px;align-items:flex-start;cursor:${n.request_id?'pointer':'default'};transition:background .1s" ${n.request_id?`onclick="closeNotifPanel();openDetail('${n.request_id}')"`:''}  onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+        <span style="font-size:18px;flex-shrink:0">${n.type==='submitted'?'📋':n.type==='status_change'?'🔄':n.type==='message'?'💬':'🔔'}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--text);line-height:1.4">${esc(n.message||'')}</div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:2px">${fmt(n.created_at)}</div>
+        </div>
+        ${!n.read?'<span style="width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:4px"></span>':''}
+      </div>`).join('')}
+    </div>
+    <div class="modal-ft"><button class="btn btn-ghost" onclick="closeNotifPanel()">Close</button></div>
+  </div>`
+  m.classList.add('open')
+  m.onclick=e=>{if(e.target===m)closeNotifPanel()}
+}
+function closeNotifPanel(){const m=q('notif-panel');if(m)m.classList.remove('open')}
+
+async function showForgotPassword(){
+  const email=q('li-email')?.value?.trim()
+  const inputEmail=email||prompt('Enter your bgparks.org email address:')
+  if(!inputEmail)return
+  if(!inputEmail.includes('@')){toast('Please enter a valid email address','err');return}
+  const {error}=await SB.auth.resetPasswordForEmail(inputEmail,{redirectTo:window.location.origin})
+  if(error){toast('Error: '+error.message,'err');return}
+  toast('Password reset email sent to '+inputEmail+'. Check your inbox.','ok','📧')
+}
+
 async function doSignOut(){
   USER=null;ALL_REQS=[];VIEW='requests'
   try{await SB.auth.signOut()}catch(e){showLogin()}
@@ -617,7 +686,7 @@ async function doSignOut(){
 
 // ── DATA ─────────────────────────────────────────────────────────
 // Explicit column selection — avoids fetching unused fields, cuts payload
-const REQ_COLS='id,created_at,request_number,program_name,program_type,start_date,end_date,program_time,location,staff_name,registration_deadline,enrollment_goal,season,department,marketing_goal,priority_score,urgency_level,impact_level,reach_level,target_who,key_message,highlights,channels,channels_v2,is_new_or_repeat,repeat_from_year,marketing_objective,target_gender,target_ages,critical_content,photo_shoot_date,photo_shoot_location,photo_supplied_by,graphics_by,graphics_due_date,social_first_post_date,social_second_post,social_second_post_date,community_calendar,community_calendar_date,photos_supplied,photos_by_marketing,video_needed,graphics_new,notes,status,marketing_notes,assigned_to_name,submitted_by_id,clarification_needed,clarification_note,approved_at,approved_by,completed_at,feedback_rating,feedback_note,is_archived'
+const REQ_COLS='id,created_at,updated_at,request_number,program_name,program_type,start_date,end_date,program_time,location,staff_name,registration_deadline,enrollment_goal,season,department,marketing_goal,priority_score,urgency_level,impact_level,reach_level,target_who,key_message,highlights,channels,channels_v2,is_new_or_repeat,repeat_from_year,marketing_objective,target_gender,target_ages,critical_content,photo_shoot_date,photo_shoot_location,photo_supplied_by,graphics_by,graphics_due_date,social_first_post_date,social_second_post,social_second_post_date,community_calendar,community_calendar_date,photos_supplied,photos_by_marketing,video_needed,graphics_new,notes,status,marketing_notes,assigned_to_name,submitted_by_id,clarification_needed,clarification_note,approved_at,approved_by,completed_at,feedback_rating,feedback_note,is_archived'
 
 async function loadReqs(){
   let q2=SB.from('marketing_requests').select(REQ_COLS).order('created_at',{ascending:false})
@@ -632,7 +701,7 @@ async function loadAllReqs(){
 }
 async function loadDetail(id){
   const [c,d,h]=await Promise.all([
-    SB.from('mkt_comments').select('id,created_at,author_name,author_role,body,is_internal').eq('request_id',id).order('created_at',{ascending:true}),
+    SB.from('mkt_comments').select('id,created_at,author_name,author_role,body,is_internal,attachment_url,attachment_name').eq('request_id',id).order('created_at',{ascending:true}),
     SB.from('mkt_deliverables').select('id,label,due_date,completed,completed_by,sort_order').eq('request_id',id).order('sort_order',{ascending:true}),
     SB.from('mkt_status_history').select('id,created_at,changed_by_name,changed_by_role,old_status,new_status,note').eq('request_id',id).order('created_at',{ascending:true}),
   ])
@@ -734,7 +803,7 @@ function showApp(){
 
   if(!q('main-content')){
     const tabs=[]
-    tabs.push({id:'requests',label:'Requests'})
+    tabs.push({id:'requests',label:'Requests'},{id:'help',label:'❓ Help'})
     if(isMkt())tabs.push({id:'queue',label:'Queue'},{id:'workload',label:'Workload'},{id:'calendar',label:'Calendar'},{id:'performance',label:'Performance'})
     if(isAdmin())tabs.push({id:'admin',label:'Admin'},{id:'users',label:'Users'})
 
@@ -752,6 +821,9 @@ function showApp(){
     </header>
     <nav class="nav" id="app-nav" role="navigation" aria-label="Main navigation">
       ${tabs.map(t=>`<button class="nav-btn" data-nav="${t.id}" aria-label="Go to ${t.label}">${esc(t.label)}</button>`).join('')}
+      <button class="nav-btn" id="notif-btn" onclick="openNotifPanel()" aria-label="Notifications" style="position:relative;padding:11px 12px">
+        🔔${NOTIF_COUNT>0?`<span style="position:absolute;top:8px;right:6px;min-width:16px;height:16px;background:var(--red);color:#fff;border-radius:20px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 3px">${NOTIF_COUNT>9?'9+':NOTIF_COUNT}</span>`:''}
+      </button>
       <button class="nav-btn new-req" id="new-req-btn" aria-label="Submit new marketing request">+ New Request</button>
     </nav>
     <main class="page" id="main-content" role="main" aria-live="polite"></main>`
@@ -782,6 +854,7 @@ function renderView(){
   else if(VIEW==='performance')el.innerHTML=renderPerformance()
   else if(VIEW==='admin')el.innerHTML=renderAdminReqs()
   else if(VIEW==='users')el.innerHTML=renderUsers()
+  else if(VIEW==='help')el.innerHTML=renderHelp()
 }
 
 let REQS_LOADED_AT = 0
@@ -802,8 +875,25 @@ async function navTo(v){
   VIEW=v; showApp()
 }
 
-function goNew(){
-  FORM=blankForm(); FORM_STEP=1; VIEW='new'; showApp()
+let DRAFT_ID = null  // track if we're editing an existing draft
+let NOTIF_COUNT = 0  // unread notification count
+let PENDING_FILE = null  // file pending upload with a message
+
+async function goNew(){
+  // Check if user has a saved draft
+  const {data} = await SB.from('mkt_drafts').select('id,form_data,updated_at').eq('user_id',USER.id).maybeSingle()
+  if(data){
+    DRAFT_ID = data.id
+    FORM = {...blankForm(), ...data.form_data}
+    FORM_STEP = data.form_data._step || 1
+    VIEW='new'; showApp()
+    // Show resume toast
+    toast('Draft resumed — last saved '+fmt(data.updated_at),'ok','📝')
+    // Show discard option in form header via DRAFT_ID being set
+  } else {
+    DRAFT_ID = null
+    FORM=blankForm(); FORM_STEP=1; VIEW='new'; showApp()
+  }
 }
 function showLogin(){
   q('root').innerHTML=`
@@ -827,7 +917,10 @@ function showLogin(){
           <span class="alert-icon">⚠</span><span></span>
         </div>
         <button id="li-btn" class="btn btn-primary btn-block" style="padding:11px;font-size:14px">Sign in →</button>
-        <p style="text-align:center;font-size:12px;color:var(--text-3);margin-top:14px">Contact your admin to get access</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+        <p style="font-size:12px;color:var(--text-3)">Contact admin to get access</p>
+        <button onclick="showForgotPassword()" style="background:none;border:none;font-size:12px;color:var(--accent);cursor:pointer;font-weight:500">Forgot password?</button>
+      </div>
       </div>
     </div>
   </div>`
@@ -846,7 +939,7 @@ function renderMyReqs(){
   let shown=reqs
   if(FILTER==='active')shown=reqs.filter(r=>r.status!=='done')
   else if(FILTER==='done')shown=reqs.filter(r=>r.status==='done')
-  if(SEARCH){const sq=SEARCH.toLowerCase();shown=shown.filter(r=>r.program_name?.toLowerCase().includes(sq)||r.marketing_goal?.toLowerCase().includes(sq))}
+  if(SEARCH){const sq=SEARCH.toLowerCase();shown=shown.filter(r=>r.program_name?.toLowerCase().includes(sq)||r.marketing_goal?.toLowerCase().includes(sq)||r.season?.toLowerCase().includes(sq)||r.department?.toLowerCase().includes(sq))}
 
   return`
   <div class="sec-hd">
@@ -860,6 +953,7 @@ function renderMyReqs(){
     <div class="stat"><div class="stat-label">Complete</div><div class="stat-value" style="color:var(--green)">${reqs.filter(r=>r.status==='done').length}</div></div>
     <div class="stat"><div class="stat-label">Needs Info</div><div class="stat-value" style="color:var(--amber)">${needs.length}</div></div>
   </div>
+  ${DRAFT_ID?`<div class="alert alert-warn" style="cursor:pointer" onclick="goNew()"><span class="alert-icon">📝</span><div><strong>You have an unsaved draft.</strong> Click here to resume where you left off, or <button onclick="event.stopPropagation();discardDraft()" style="background:none;border:none;color:var(--amber);font-weight:700;cursor:pointer;text-decoration:underline;font-size:13px">discard it</button>.</div></div>`:''}
   <div class="filter-bar">
     <div class="search-wrap"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l2.5 2.5"/></svg><input type="search" class="search-input" placeholder="Search requests…" value="${esc(SEARCH)}" oninput="SEARCH=this.value;renderView()" aria-label="Search requests"></div>
     <div class="pills" role="group" aria-label="Filter by status">
@@ -876,7 +970,7 @@ function renderMyReqs(){
     return`<div class="req-card${clar?' needs-info':''}" onclick="openDetail('${r.id}')" role="button" tabindex="0" aria-label="View request: ${esc(r.program_name)}" onkeydown="if(event.key==='Enter')openDetail('${r.id}')">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">
         <div style="flex:1;min-width:0">
-          <div class="req-card-title">${esc(r.program_name)}${clar?'<span class="badge badge-reviewing" style="margin-left:8px;font-size:10px;vertical-align:middle">⚠ Needs your info</span>':''}</div>
+          <div class="req-card-title">${r.request_number?`<span style="font-size:11px;font-weight:400;color:var(--text-3);margin-right:4px">#${r.request_number}</span>`:""}<span>${esc(r.program_name)}</span>${clar?`<span class="badge badge-reviewing" style="margin-left:8px;font-size:10px;vertical-align:middle">⚠ Needs your info</span>`:""}</div>
           <div class="req-card-meta">
             ${r.program_type?`<span class="tag">${esc(r.program_type)}</span>`:''}
             ${r.marketing_goal?`<span style="color:var(--text-2)">${esc(r.marketing_goal)}</span>`:''}
@@ -889,6 +983,7 @@ function renderMyReqs(){
       <div class="req-card-foot">
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text-3);flex-wrap:wrap;align-items:center">
           <span>Submitted ${fmt(r.created_at)}</span>
+          ${r.updated_at&&r.updated_at!==r.created_at?`<span style="color:var(--text-3)">· Updated ${fmt(r.updated_at)}</span>`:''}
           ${deadlineTag(r.registration_deadline,r.status)}
           ${chs?`<span>${chs}</span>`:''}
         </div>
@@ -903,7 +998,7 @@ function renderAllReqs(){
   let reqs=ALL_REQS
   if(!SHOW_ARCHIVED)reqs=reqs.filter(r=>!r.is_archived)
   if(FILTER!=='all')reqs=reqs.filter(r=>r.status===FILTER)
-  if(SEARCH){const sq=SEARCH.toLowerCase();reqs=reqs.filter(r=>r.program_name?.toLowerCase().includes(sq)||r.staff_name?.toLowerCase().includes(sq)||r.department?.toLowerCase().includes(sq))}
+  if(SEARCH){const sq=SEARCH.toLowerCase();reqs=reqs.filter(r=>r.program_name?.toLowerCase().includes(sq)||r.staff_name?.toLowerCase().includes(sq)||r.department?.toLowerCase().includes(sq)||r.marketing_goal?.toLowerCase().includes(sq)||r.season?.toLowerCase().includes(sq)||r.marketing_objective?.toLowerCase().includes(sq))}
   const src=ALL_REQS.filter(r=>!r.is_archived)
   const admin=isAdmin(), sel=SELECTED
   const overdue=src.filter(r=>r.registration_deadline&&daysUntil(r.registration_deadline)<0&&r.status!=='done').length
@@ -911,7 +1006,10 @@ function renderAllReqs(){
   return`
   <div class="sec-hd">
     <div><div class="page-title">All Requests</div><div class="page-sub">${admin?'Admin — full access':'Marketing team view'}</div></div>
-    <button class="btn btn-primary" onclick="goNew()">+ New Request</button>
+    <div class="sec-hd-actions">
+      <button class="btn btn-sm" onclick="exportCSV()" title="Export to CSV">⬇ Export CSV</button>
+      <button class="btn btn-primary" onclick="goNew()">+ New Request</button>
+    </div>
   </div>
   ${overdue>0?`<div class="alert alert-error"><span class="alert-icon">🚨</span><div><strong>${overdue} overdue deadline${overdue>1?'s':''}</strong> — these requests have passed their registration deadline.</div></div>`:''}
   <div class="g4" style="margin-bottom:20px">
@@ -953,11 +1051,12 @@ function renderAllReqs(){
             ${admin?`<td><input type="checkbox" ${sel.has(r.id)?'checked':''} onchange="selToggle('${r.id}',this.checked)" aria-label="Select ${esc(r.program_name)}"></td>`:''}
             <td>
               <div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px">
+                ${r.request_number?`<span style="font-size:10px;font-weight:400;color:var(--text-3)">#${r.request_number}</span>`:''}
                 ${r.is_archived?'<span class="badge badge-archived" style="font-size:10px">Archived</span>':''}
                 ${esc(r.program_name)}
                 ${r.clarification_needed?'<span class="dot" style="background:var(--amber)" title="Needs info"></span>':''}
               </div>
-              <div style="font-size:11px;color:var(--text-3);margin-top:2px">${esc(r.marketing_goal||'—')} ${r.department?'· '+esc(r.department):''}</div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:2px">${esc(r.marketing_goal||'—')} ${r.department?'· '+esc(r.department):''} ${r.updated_at&&r.updated_at!==r.created_at?'· Upd '+fmtShort(r.updated_at):''}</div>
             </td>
             <td style="font-size:13px;color:var(--text-2)">${esc(r.staff_name||'—')}</td>
             <td>${admin
@@ -1000,6 +1099,10 @@ function renderForm(){
       <div class="page-title">${FORM_STEP===1?'New Marketing Request':'Add Details'}</div>
       <div class="page-sub">${FORM_STEP===1?'✱ Required fields — everything else is optional':'Add as much or as little as you like'}</div>
     </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      ${DRAFT_ID?'<span style="font-size:12px;color:var(--text-3)">📝 Draft in progress</span>':''}
+      <button id="save-draft-btn" class="btn btn-sm" onclick="saveDraft()" title="Save your progress — come back and finish later">💾 Save Draft</button>
+    </div>
   </div>
   <div class="steps" aria-label="Form progress">
     <div class="step ${FORM_STEP>=1?(FORM_STEP>1?'done':'active'):''}" aria-current="${FORM_STEP===1?'step':'false'}">
@@ -1014,12 +1117,15 @@ function renderForm(){
   </div>
   ${FORM_STEP===1?renderFormS1(f,s):renderFormS2(f)}
   <div style="display:flex;justify-content:space-between;margin-top:20px;gap:10px;flex-wrap:wrap">
-    <div>${FORM_STEP>1?'<button class="btn" id="form-back-btn">← Back</button>':''}</div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-ghost" onclick="backToReqs()">Cancel</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      ${FORM_STEP>1?'<button class="btn" id="form-back-btn">← Back</button>':''}
+      ${DRAFT_ID?'<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="discardDraft()">🗑 Discard draft</button>':''}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="backToReqs()">Save & close</button>
       ${FORM_STEP===1
         ?`<button class="btn btn-primary" onclick="validateStep1()">Next: Channels & Details →</button>`
-        :`<button id="submit-btn" class="btn btn-primary" onclick="handleSubmit()" style="min-width:140px">Submit Request ✓</button>`
+        :`<button id="submit-btn" class="btn btn-primary" onclick="handleSubmit()" style="min-width:160px">✓ Submit Request</button>`
       }
     </div>
   </div>
@@ -1033,7 +1139,7 @@ function renderFormS1(f,s){
     <div class="sec-label" style="margin-bottom:14px">Program or Event Details</div>
     <div id="field-name" class="field">
       <label for="f-name">Program / Event name <span class="req" aria-label="required">✱</span></label>
-      <input id="f-name" value="${esc(f.program_name)}" placeholder="e.g. Youth Flag Football League" oninput="FORM.program_name=this.value" autocomplete="off" aria-required="true">
+      <input id="f-name" value="${esc(f.program_name)}" placeholder="e.g. Youth Flag Football League" oninput="FORM.program_name=this.value" autocomplete="off" aria-required="true" maxlength="120">
       <div class="err-msg" role="alert">Program name is required</div>
     </div>
     <div class="g2">
@@ -1061,7 +1167,8 @@ function renderFormS1(f,s){
       </div>
       <div class="field">
         <label>Registration deadline <span class="opt">(optional)</span></label>
-        <input type="date" value="${f.registration_deadline}" onchange="FORM.registration_deadline=this.value;rerenderScore()">
+        <input type="date" value="${f.registration_deadline}" onchange="FORM.registration_deadline=this.value;rerenderScore();if(this.value&&new Date(this.value)<new Date(new Date().toDateString())){const w=this.nextElementSibling;if(w){w.textContent='⚠ This date is in the past';w.style.display='block';w.style.color='var(--amber)'}}" >
+        <div class="hint" style="display:none"></div>
       </div>
       <div class="field">
         <label>Location / Facility <span class="opt">(optional)</span></label>
@@ -1091,7 +1198,10 @@ function renderFormS1(f,s){
             ${v==='retention'?'🔁 Retention':'➕ Acquisition'}
           </label>`).join('')}
         </div>
-        <div style="font-size:11px;color:var(--text-3);margin-top:5px">Retention = keep current members · Acquisition = attract new</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:5px;line-height:1.5">
+          <strong>Retention</strong> — keeping current members/participants (e.g. renewal campaigns, loyalty programs, returning class promos)<br>
+          <strong>Acquisition</strong> — attracting new members/participants (e.g. new class launch, community event, open house)
+        </div>
       </div>
     </div>
     <div>
@@ -1244,8 +1354,17 @@ function renderFormS2(f){
     <div class="sec-label" style="margin-bottom:14px">Critical Content <span style="font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-3)">(optional)</span></div>
     <div class="field" style="margin-bottom:0">
       <label>Exact content for marketing to use</label>
-      <textarea id="f-critical" style="min-height:100px" placeholder="Include dates, times, location, fees, description, offer details, and any specific wording you want used in the campaign…" oninput="FORM.critical_content=this.value">${esc(f.critical_content)}</textarea>
-      <div class="hint">Paste everything marketing needs — dates, times, fees, specific wording. The more detail, the better.</div>
+      ${!f.critical_content?`<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px;font-size:12px;color:var(--text-2);line-height:1.7">
+        <strong style="display:block;margin-bottom:4px;color:var(--text-3);font-size:10px;text-transform:uppercase;letter-spacing:.06em">Include all that apply:</strong>
+        📅 <strong>Dates & times</strong> — when does it start, what days/hours does it run?<br>
+        📍 <strong>Location</strong> — which facility or room?<br>
+        💵 <strong>Cost</strong> — resident/non-resident fees, member pricing?<br>
+        📝 <strong>Description</strong> — 1–2 sentences describing the program<br>
+        📞 <strong>Registration info</strong> — how to sign up, deadline, link or code<br>
+        ✏️ <strong>Exact wording</strong> — any specific phrases or names you want used
+      </div>`:''}
+      <textarea id="f-critical" style="min-height:120px" placeholder="e.g. Youth Flag Football League — Saturdays 9–11am, April 5 – May 31. Alcott Center Field. Residents $85 / Non-residents $110. Register at bgparks.org or call 847.850.2100. Ages 8–12. Equipment provided." oninput="FORM.critical_content=this.value">${esc(f.critical_content)}</textarea>
+      <div class="hint">The more complete this is, the faster marketing can build your assets without follow-up questions.</div>
     </div>
   </div>
 
@@ -1270,7 +1389,7 @@ function renderFormS2(f){
     </div>
     <div class="field">
       <label>Key message / Headline</label>
-      <textarea placeholder="The most important thing your audience should know…" oninput="FORM.key_message=this.value">${esc(f.key_message)}</textarea>
+      <textarea placeholder="The most important thing your audience should know…" oninput="FORM.key_message=this.value" maxlength="500">${esc(f.key_message)}</textarea>
       <div class="hint">This becomes the headline for all creative assets</div>
     </div>
     <div class="field">
@@ -1279,7 +1398,7 @@ function renderFormS2(f){
     </div>
     <div class="field" style="margin-bottom:0">
       <label>Notes for marketing</label>
-      <textarea placeholder="Budget limits, approvals needed, past campaign notes…" oninput="FORM.notes=this.value">${esc(f.notes)}</textarea>
+      <textarea placeholder="Budget limits, approvals needed, past campaign notes…" oninput="FORM.notes=this.value" maxlength="2000">${esc(f.notes)}</textarea>
     </div>
   </div>`
 }
@@ -1332,10 +1451,68 @@ function validateStep1(){
 
 async function handleSubmit(){
   if(!FORM)return
+  // Double-click protection
+  const btn=q('submit-btn')
+  if(btn&&btn.disabled)return
+  if(btn){btn.disabled=true}
   const fe=q('form-err');if(fe)fe.style.display='none'
+  // Warn if no channels selected
+  const cv=FORM.channels_v2||{}
+  const totalCh=Object.values(cv).reduce((s,a)=>s+(Array.isArray(a)?a.length:0),0)
+  if(totalCh===0){
+    showConfirmModal(
+      'No channels selected',
+      'You haven\'t selected any channels yet. You can still submit and add channel details via a message — or go back to select channels now.',
+      'Submit Anyway',
+      async()=>{await submitRequest();if(VIEW==='submitted')await deleteDraft()},
+      ()=>{if(btn)btn.disabled=false},
+      'btn-primary'
+    )
+    return
+  }
   await submitRequest()
+  if(VIEW==='submitted') await deleteDraft()
 }
-function backToReqs(){FORM=null;FORM_STEP=1;navTo('requests')}
+async function saveDraft(){
+  if(!FORM||!USER)return
+  const btn=q('save-draft-btn')
+  if(btn){btn.textContent='Saving…';btn.disabled=true}
+  const payload={...FORM, _step:FORM_STEP}
+  let error
+  if(DRAFT_ID){
+    ({error}=await SB.from('mkt_drafts').update({form_data:payload}).eq('id',DRAFT_ID))
+  } else {
+    const {data,error:e}=await SB.from('mkt_drafts')
+      .upsert([{user_id:USER.id,form_data:payload}],{onConflict:'user_id'})
+      .select().single()
+    error=e
+    if(data)DRAFT_ID=data.id
+  }
+  if(btn){btn.textContent='✓ Saved';btn.disabled=false;setTimeout(()=>{if(btn)btn.textContent='Save Draft'},2000)}
+  if(error){toast('Error saving draft','err');return}
+  toast('Draft saved — you can close and resume later','ok','💾')
+}
+
+async function deleteDraft(){
+  if(DRAFT_ID){
+    await SB.from('mkt_drafts').delete().eq('id',DRAFT_ID)
+    DRAFT_ID=null
+  } else {
+    // delete by user_id just in case
+    await SB.from('mkt_drafts').delete().eq('user_id',USER.id)
+  }
+}
+
+async function discardDraft(){
+  showConfirmModal('Discard Draft','Your draft will be permanently deleted. This cannot be undone.','Discard Draft',async()=>{await deleteDraft();FORM=null;FORM_STEP=1;navTo('requests')});return
+  await deleteDraft()
+  FORM=null;FORM_STEP=1;navTo('requests')
+}
+
+function backToReqs(){
+  // Don't delete draft on back — let them resume
+  FORM=null;FORM_STEP=1;navTo('requests')
+}
 
 // ── CONFIRM SCREEN ────────────────────────────────────────────────
 function renderConfirm(){
@@ -1390,6 +1567,7 @@ function renderDetail(){
         </div>
         ${s>0?`<div style="margin-top:8px;display:flex;align-items:center;gap:8px"><span class="badge ${scoreBadgeCls(s)}">${scoreBadgeLbl(s)}</span><div style="width:80px;height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div style="width:${s}%;height:100%;background:${scoreColor(s)};border-radius:2px"></div></div><span style="font-size:11px;font-weight:600;color:${scoreColor(s)}">${s}/100</span></div>`:''}
       </div>
+      ${!mkt&&r.status==='new'?`<button class="btn btn-sm" onclick="openStaffEditModal('${r.id}')" aria-label="Edit your request">✏️ Edit Request</button>`:''}
       ${mkt?`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         ${prevStatus?`<button class="btn btn-sm btn-ghost" onclick="detailChangeStatus('${r.id}','${prevStatus}')" aria-label="Move to ${SL[prevStatus]}">← ${SL[prevStatus]}</button>`:''}
         ${nextStatus?`<button class="btn btn-sm btn-primary" onclick="detailChangeStatus('${r.id}','${nextStatus}')" aria-label="Move to ${SL[nextStatus]}">→ ${SL[nextStatus]}</button>`:''}
@@ -1397,7 +1575,7 @@ function renderDetail(){
         ${admin&&r.status==='done'?`<button class="btn btn-sm btn-amber" onclick="reopenReq('${r.id}')">↩ Reopen</button>`:''}
       </div>`:''}
     </div>
-    ${r.clarification_needed&&!mkt?`<div class="alert alert-warn" style="margin-top:12px;margin-bottom:0"><span class="alert-icon">💬</span><div><strong>Marketing has a question for you</strong>${r.clarification_note?`<br><em style="font-size:13px">${esc(r.clarification_note)}</em>`:''}<br><span style="font-size:12px">Reply in the Messages tab below.</span></div></div>`:''}
+    ${r.clarification_needed&&!mkt?`<div class="alert alert-warn" style="margin-top:12px;margin-bottom:0"><span class="alert-icon">💬</span><div style="flex:1"><strong>Marketing has a question for you</strong>${r.clarification_note?`<br><em style="font-size:13px">${esc(r.clarification_note)}</em>`:''}<br><span style="font-size:12px">Add your reply below, then hit Send.</span></div><button class="btn btn-sm btn-amber" style="flex-shrink:0;align-self:flex-start" onclick="switchTab('messages');setTimeout(()=>q('comment-input')?.focus(),100)">Reply →</button></div></div>`:''}
     ${r.clarification_needed&&mkt?`<div class="alert alert-info" style="margin-top:12px;margin-bottom:0"><span class="alert-icon">⏳</span><div>Waiting for more information from ${esc(r.staff_name||'staff')}.</div></div>`:''}
   </div>
 
@@ -1413,10 +1591,10 @@ function renderDetail(){
 function renderTabContent(r,mkt,admin,chs,hi,s){
   if(DETAIL_TAB==='brief'){
     const fields=[
-      ['Program',r.program_name],['Type',r.program_type],['Season',r.season],
+      ['Program / Event name',r.program_name],['Type',r.program_type],['Season',r.season],
       ['Start',r.start_date&&fmt(r.start_date)],['End',r.end_date&&fmt(r.end_date)],
-      ['Time',r.program_time],['Location',r.location],
-      ['Reg. deadline',r.registration_deadline?fmt(r.registration_deadline)+(daysUntil(r.registration_deadline)!==null?' ('+( daysUntil(r.registration_deadline)<0?'OVERDUE':daysUntil(r.registration_deadline)+'d away')+')'  :  ''):null],
+      ['Time / Schedule',r.program_time],['Location',r.location],
+      ['Registration Deadline',r.registration_deadline?fmt(r.registration_deadline)+(daysUntil(r.registration_deadline)!==null?' ('+( daysUntil(r.registration_deadline)<0?'OVERDUE':daysUntil(r.registration_deadline)+'d away')+')'  :  ''):null],
       ['Enrollment goal',r.enrollment_goal?r.enrollment_goal+' participants':null],
       ['Goal',r.marketing_goal],
       ['New or Repeat',r.is_new_or_repeat==='repeat'?'Repeat'+(r.repeat_from_year?' from '+r.repeat_from_year:''):r.is_new_or_repeat==='new'?'New':null],
@@ -1424,6 +1602,7 @@ function renderTabContent(r,mkt,admin,chs,hi,s){
       ['Target Gender',r.target_gender&&r.target_gender!=='all'?r.target_gender.charAt(0).toUpperCase()+r.target_gender.slice(1):null],
       ['Target Ages',(r.target_ages||[]).length?(r.target_ages||[]).join(', '):null],
       ['Target audience',r.target_who],
+      ['Staff feedback',r.feedback_rating?'⭐'.repeat(r.feedback_rating)+(r.feedback_note?' — '+r.feedback_note:''):null],
     ].filter(([,v])=>v)
 
     return`
@@ -1476,11 +1655,16 @@ function renderTabContent(r,mkt,admin,chs,hi,s){
             <span style="margin-left:auto;font-size:10px">${fmt(c.created_at)}</span>
           </div>
           <div class="comment-body">${esc(c.body)}</div>
+          ${c.attachment_url?('<div style="margin-top:8px"><a href="'+c.attachment_url+'" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--accent);text-decoration:none;font-weight:500">📎 '+esc(c.attachment_name||'Attachment')+'</a></div>'):''}
         </div>
       </div>`).join('')}
     </div>
     <div style="border-top:1px solid var(--border-light);padding-top:14px">
       <textarea id="comment-input" placeholder="Write a message…" style="width:100%;min-height:68px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);outline:none;font-size:13px;resize:vertical;margin-bottom:8px;transition:border-color .12s" aria-label="Message text"></textarea>
+      <div style="margin-bottom:8px">
+        <label style="font-size:12px;color:var(--text-2);font-weight:500;display:block;margin-bottom:5px">📎 Attach a file <span style="font-weight:400;color:var(--text-3)">(optional — images, PDFs, Word docs, up to 10MB)</span></label>
+        <input type="file" id="msg-file" accept="image/*,.pdf,.doc,.docx,.mp4,.mov" style="font-size:12px;color:var(--text-2)" onchange="PENDING_FILE=this.files[0]||null">
+      </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         ${mkt?`<label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-2);cursor:pointer;user-select:none"><input type="checkbox" id="internal-chk"> Internal note (hidden from staff)</label>`:''}
         <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="sendMsg('${r.id}')">Send Message →</button>
@@ -1561,7 +1745,7 @@ function renderQueue(){
         const sc=r.priority_score||0, d=daysUntil(r.registration_deadline)
         return`<div class="k-card" onclick="openDetail('${r.id}')" role="button" tabindex="0" aria-label="${esc(r.program_name)}" onkeydown="if(event.key==='Enter')openDetail('${r.id}')">
           <div class="k-card-stripe" style="background:${scoreColor(sc)}"></div>
-          <div class="k-card-title">${esc(r.program_name)}${r.clarification_needed?'<span class="dot" style="background:var(--amber);margin-left:5px;display:inline-block" title="Needs info"></span>':''}</div>
+          <div class="k-card-title">${r.request_number?`<span style="font-size:10px;color:var(--text-3);font-weight:400;margin-right:3px">#${r.request_number}</span>`:""}<span>${esc(r.program_name)}</span>${r.clarification_needed?'<span class="dot" style="background:var(--amber);margin-left:5px;display:inline-block" title="Needs info"></span>':''}</div>
           <div class="k-card-meta">${esc(r.staff_name||'')}${r.department?' · '+esc(r.department):''}</div>
           <div style="display:flex;gap:4px;flex-wrap:wrap">
             ${sc>0?`<span class="badge ${scoreBadgeCls(sc)}" style="font-size:10px">${sc}</span>`:''}
@@ -1644,8 +1828,58 @@ function renderCalendar(){
 }
 
 // ── PERFORMANCE ────────────────────────────────────────────────────
-function renderPerformance(){
+function exportCSV(){
   const reqs=ALL_REQS.filter(r=>!r.is_archived)
+  if(!reqs.length){toast('No requests to export','err');return}
+  const cols=[
+    ['#','request_number'],['Program','program_name'],['Type','program_type'],
+    ['Department','department'],['Status','status'],['Staff','staff_name'],
+    ['Goal','marketing_goal'],['Objective','marketing_objective'],
+    ['New/Repeat','is_new_or_repeat'],['Start Date','start_date'],['End Date','end_date'],
+    ['Reg Deadline','registration_deadline'],['Season','season'],['Location','location'],
+    ['Priority Score','priority_score'],['Urgency','urgency_level'],
+    ['Revenue Impact','impact_level'],['Audience Reach','reach_level'],
+    ['Target Gender','target_gender'],['Key Message','key_message'],
+    ['Critical Content','critical_content'],['Submitted','created_at'],['Last Updated','updated_at'],
+  ]
+  const header=cols.map(([l])=>'"'+l+'"').join(',')
+  const rows=reqs.map(r=>cols.map(([,k])=>{
+    let v=r[k]
+    if(v===null||v===undefined)v=''
+    if(k==='status')v=SL[v]||v
+    if(k==='created_at'||k==='updated_at'||k.includes('date'))v=v?fmt(v):''
+    return'"'+String(v).replace(/"/g,'""')+'"'
+  }).join(','))
+  const csv=[header,...rows].join('\n')
+  const blob=new Blob([csv],{type:'text/csv'})
+  const url=URL.createObjectURL(blob)
+  const a=document.createElement('a')
+  a.href=url; a.download='BGPD_Marketing_Requests_'+new Date().toISOString().slice(0,10)+'.csv'
+  document.body.appendChild(a); a.click(); document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  toast('Exported '+reqs.length+' requests','ok','⬇')
+}
+
+function renderPerformance(){
+  // Date range filtering
+  const now=new Date()
+  const ranges={
+    all:null,
+    q1:[new Date(now.getFullYear(),0,1),new Date(now.getFullYear(),3,1)],
+    q2:[new Date(now.getFullYear(),3,1),new Date(now.getFullYear(),6,1)],
+    q3:[new Date(now.getFullYear(),6,1),new Date(now.getFullYear(),9,1)],
+    q4:[new Date(now.getFullYear(),9,1),new Date(now.getFullYear()+1,0,1)],
+    last30:[new Date(Date.now()-30*86400000),now],
+    last90:[new Date(Date.now()-90*86400000),now],
+  }
+  const PERF_RANGE = window._perfRange||'all'
+  const range=ranges[PERF_RANGE]
+  const reqs=ALL_REQS.filter(r=>{
+    if(r.is_archived)return false
+    if(!range)return true
+    const d=new Date(r.created_at)
+    return d>=range[0]&&d<range[1]
+  })
   const total=reqs.length, done=reqs.filter(r=>r.status==='done').length
   const active=reqs.filter(r=>r.status!=='done').length
   const avg=total?Math.round(reqs.reduce((s,r)=>s+(r.priority_score||0),0)/total):0
@@ -1664,7 +1898,15 @@ function renderPerformance(){
   const rate=total?Math.round(done/total*100):0
 
   return`
-  <div class="sec-hd"><div class="page-title">Performance</div><div class="page-sub">Overview of all marketing requests</div></div>
+  <div class="sec-hd" style="flex-wrap:wrap;gap:10px">
+    <div><div class="page-title">Performance</div><div class="page-sub">Overview of all marketing requests</div></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select onchange="window._perfRange=this.value;renderView()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px;background:var(--surface);color:var(--text);font-family:inherit" aria-label="Date range filter">
+        ${[['all','All time'],['last30','Last 30 days'],['last90','Last 90 days'],['q1','Q1 (Jan–Mar)'],['q2','Q2 (Apr–Jun)'],['q3','Q3 (Jul–Sep)'],['q4','Q4 (Oct–Dec)']].map(([v,l])=>`<option value="${v}"${(window._perfRange||'all')===v?' selected':''}>${l}</option>`).join('')}
+      </select>
+      <button class="btn btn-sm" onclick="exportCSV()" title="Export to CSV">⬇ Export CSV</button>
+    </div>
+  </div>
   <div class="g4" style="margin-bottom:20px">
     <div class="stat"><div class="stat-label">Total Requests</div><div class="stat-value">${total}</div><div class="stat-delta">${active} active</div></div>
     <div class="stat"><div class="stat-label">Completion Rate</div><div class="stat-value" style="color:var(--green)">${rate}%</div><div class="stat-delta">${done} complete</div></div>
@@ -1731,9 +1973,10 @@ function renderUsers(){
           <td style="font-size:12px;color:var(--text-2)">${esc(u.department||'—')}</td>
           <td style="font-size:12px;color:var(--text-3)">${u.last_seen_at?fmt(u.last_seen_at):'Never'}</td>
           <td><span style="font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;background:${u.is_active?'var(--green-bg)':'#F3F4F6'};color:${u.is_active?'var(--green)':'#6B7280'}">${u.is_active?'Active':'Inactive'}</span></td>
-          <td><div style="display:flex;gap:4px">
+          <td><div style="display:flex;gap:4px;flex-wrap:wrap">
             <button class="btn btn-xs" onclick="openEditUser('${u.id}')" aria-label="Edit ${esc(u.full_name)}">✏️ Edit</button>
             <button class="btn btn-xs ${u.is_active?'btn-amber':'btn-green'}" onclick="toggleUserActive('${u.id}',${!u.is_active})" aria-label="${u.is_active?'Deactivate':'Activate'} ${esc(u.full_name)}">${u.is_active?'Deactivate':'Activate'}</button>
+            <button class="btn btn-xs" onclick="openReassignModal('${u.id}','${esc(u.full_name)}')" title="Reassign all open requests from this user" aria-label="Reassign requests from ${esc(u.full_name)}">↪ Reassign</button>
             <button class="btn btn-xs btn-red" onclick="deleteUser('${u.id}','${esc(u.full_name)}')" aria-label="Delete ${esc(u.full_name)}">🗑</button>
           </div></td>
         </tr>`).join('')}
@@ -1820,6 +2063,124 @@ async function saveEdit(id){
   if(req?.status!==newStatus)SB.from('mkt_status_history').insert([{request_id:id,changed_by_name:USER.full_name,changed_by_role:'admin',old_status:req?.status,new_status:newStatus,note:'Edited by admin'}])
   Object.assign(req||{},fields)
   closeModal('modal-edit'); toast('Changes saved ✓'); renderView()
+}
+
+function openReassignModal(userId, userName){
+  // Find all open requests for this user
+  const openReqs = ALL_REQS.filter(r=>r.submitted_by_id===userId&&r.status!=='done'&&!r.is_archived)
+  const otherStaff = USERS_LIST.filter(u=>u.id!==userId&&u.role==='staff'&&u.is_active)
+  const m=q('modal-user')
+  m.innerHTML=`<div class="modal" style="max-width:480px">
+    <div class="modal-hd">
+      <div><div class="modal-title">Reassign Requests</div><div class="modal-sub">${esc(userName)} has ${openReqs.length} open request${openReqs.length!==1?'s':''}</div></div>
+      <button class="modal-x" onclick="closeModal('modal-user')" aria-label="Close">×</button>
+    </div>
+    <div class="modal-bd">
+      ${openReqs.length===0?`<div style="text-align:center;padding:20px;color:var(--text-3);font-style:italic">No open requests to reassign.</div>`:`
+      <div style="margin-bottom:14px">
+        <div style="font-size:13px;color:var(--text-2);margin-bottom:10px">The following open requests will be reassigned:</div>
+        ${openReqs.map(r=>`<div style="font-size:13px;padding:6px 10px;background:var(--surface-2);border-radius:6px;margin-bottom:4px;display:flex;justify-content:space-between"><span>${esc(r.program_name)}</span><span class="badge ${SB2[r.status]}">${SL[r.status]}</span></div>`).join('')}
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>Reassign to</label>
+        <select id="reassign-target">
+          <option value="">Select a staff member…</option>
+          ${otherStaff.map(u=>`<option value="${u.id}|${esc(u.full_name)}">${esc(u.full_name)}</option>`).join('')}
+          <option value="unassigned|Unassigned">Leave unassigned (keep requests, just note the change)</option>
+        </select>
+      </div>`}
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('modal-user')">Cancel</button>
+      ${openReqs.length>0?`<button class="btn btn-primary" onclick="doReassign('${userId}','${esc(userName)}')">Reassign ${openReqs.length} Request${openReqs.length!==1?"s":""}</button>`:`<button class="btn" onclick="closeModal('modal-user')">Close</button>`}
+    </div>
+  </div>`
+  m.classList.add('open')
+  m.onclick=e=>{if(e.target===m)closeModal('modal-user')}
+}
+
+async function doReassign(fromUserId, fromUserName){
+  const sel=q('reassign-target')?.value
+  if(!sel){toast('Please select a staff member to reassign to','err');return}
+  const [toId, toName]=sel.split('|')
+  const openReqs=ALL_REQS.filter(r=>r.submitted_by_id===fromUserId&&r.status!=='done'&&!r.is_archived)
+  if(!openReqs.length){closeModal('modal-user');return}
+
+  for(const r of openReqs){
+    const newName=toId==='unassigned'?r.staff_name+' (departed)':toName
+    await SB.from('marketing_requests').update({
+      submitted_by_id: toId==='unassigned'?r.submitted_by_id:toId,
+      staff_name: newName,
+      notes:(r.notes||'')+`\n[Reassigned from ${fromUserName} on ${new Date().toLocaleDateString()}]`
+    }).eq('id',r.id)
+    // Log in history
+    SB.from('mkt_status_history').insert([{
+      request_id:r.id, changed_by_name:USER.full_name, changed_by_role:'admin',
+      old_status:r.status, new_status:r.status,
+      note:`Reassigned from ${fromUserName} to ${newName} by admin`
+    }])
+    const local=ALL_REQS.find(x=>x.id===r.id)
+    if(local){local.submitted_by_id=toId==='unassigned'?local.submitted_by_id:toId;local.staff_name=newName}
+  }
+  closeModal('modal-user')
+  renderView()
+  toast(`${openReqs.length} request${openReqs.length!==1?'s':''} reassigned to ${toId==='unassigned'?'departed status':toName}`)
+}
+
+function openStaffEditModal(id){
+  const r=getReq(id);if(!r)return
+  if(r.status!=='new'){toast('Can only edit requests that are still Submitted','err');return}
+  const m=q('modal-edit')
+  m.innerHTML=`<div class="modal" style="max-width:580px">
+    <div class="modal-hd">
+      <div><div class="modal-title">Edit Your Request</div><div class="modal-sub">You can edit while status is "Submitted" — marketing hasn't started yet</div></div>
+      <button class="modal-x" onclick="closeModal('modal-edit')" aria-label="Close">×</button>
+    </div>
+    <div class="modal-bd">
+      <div class="field"><label for="se-name">Program name ✱</label><input id="se-name" value="${esc(r.program_name)}" maxlength="120"></div>
+      <div class="g2">
+        <div class="field"><label>Type</label><select id="se-type"><option value="">Select…</option>${PTYPES.map(o=>`<option${r.program_type===o?' selected':''}>${o}</option>`).join('')}</select></div>
+        <div class="field"><label>Department</label><select id="se-dept"><option value="">Select…</option>${DEPTS.map(d=>`<option${r.department===d?' selected':''}>${d}</option>`).join('')}</select></div>
+        <div class="field"><label>Start date</label><input type="date" id="se-start" value="${r.start_date||''}"></div>
+        <div class="field"><label>End date</label><input type="date" id="se-end" value="${r.end_date||''}"></div>
+        <div class="field"><label>Reg. deadline</label><input type="date" id="se-deadline" value="${r.registration_deadline||''}"></div>
+        <div class="field"><label>Location</label><input id="se-loc" value="${esc(r.location||'')}"></div>
+      </div>
+      <div class="field"><label>Key message</label><textarea id="se-msg" style="min-height:56px" maxlength="500">${esc(r.key_message||'')}</textarea></div>
+      <div class="field"><label>Critical content</label><textarea id="se-critical" style="min-height:80px" maxlength="3000">${esc(r.critical_content||'')}</textarea><div class="hint">Include dates, times, location, fees, and exact wording for marketing to use</div></div>
+      <div class="field" style="margin-bottom:0"><label>Notes for marketing</label><textarea id="se-notes" style="min-height:56px" maxlength="2000">${esc(r.notes||'')}</textarea></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit')">Cancel</button>
+      <button id="se-save-btn" class="btn btn-primary" onclick="saveStaffEdit('${id}')">Save Changes</button>
+    </div>
+  </div>`
+  m.classList.add('open')
+  m.addEventListener('click',e=>{if(e.target===m)closeModal('modal-edit')})
+}
+
+async function saveStaffEdit(id){
+  const name=q('se-name')?.value?.trim()
+  if(!name){toast('Program name is required','err');return}
+  setBtn('se-save-btn',true,'Saving…')
+  const fields={
+    program_name:name,
+    program_type:q('se-type')?.value||null,
+    department:q('se-dept')?.value||null,
+    start_date:q('se-start')?.value||null,
+    end_date:q('se-end')?.value||null,
+    registration_deadline:q('se-deadline')?.value||null,
+    location:q('se-loc')?.value||null,
+    key_message:q('se-msg')?.value||null,
+    critical_content:q('se-critical')?.value||null,
+    notes:q('se-notes')?.value||null,
+  }
+  const {error}=await SB.from('marketing_requests').update(fields).eq('id',id)
+  setBtn('se-save-btn',false)
+  if(error){toast('Error: '+error.message,'err');return}
+  const r=getReq(id);if(r)Object.assign(r,fields)
+  closeModal('modal-edit'); toast('Request updated ✓')
+  await loadDetail(id); VIEW='detail'; showApp()
 }
 
 function openAddUser(){
@@ -1939,7 +2300,8 @@ async function toggleUserActive(id,active){
 }
 
 async function deleteUser(id,name){
-  if(!confirm('Delete "'+name+'"?\n\nThis removes their profile from the app. Their Supabase login account must be removed separately in Authentication → Users.'))return
+  showConfirmModal('Delete User','Remove "'+name+'" from the app? Their login account must also be removed separately in Supabase → Authentication → Users.','Delete User',()=>_doDeleteUser(id,name));return}
+async function _doDeleteUser(id,name){
   const {error}=await SB.from('mkt_users').delete().eq('id',id)
   if(error){toast('Error: '+error.message,'err');return}
   USERS_LIST=USERS_LIST.filter(u=>u.id!==id)
@@ -2006,8 +2368,24 @@ async function saveClarNote(id,note){
 async function sendMsg(id){
   const body=q('comment-input')?.value?.trim()
   const internal=q('internal-chk')?.checked||false
-  if(!body){toast('Please write a message','err');return}
-  const {error}=await SB.from('mkt_comments').insert([{request_id:id,author_name:USER.full_name,author_role:USER.role,body,is_internal:internal}])
+  const file=PENDING_FILE
+  if(!body&&!file){toast('Please write a message or attach a file','err');return}
+  // Upload file first if present
+  let fileUrl=null, fileName=null
+  if(file){
+    const ext=file.name.split('.').pop()
+    const path=`${id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`
+    const {error:upErr}=await SB.storage.from('request-attachments').upload(path,file)
+    if(upErr){toast('File upload failed: '+upErr.message,'err');return}
+    const {data:urlData}=SB.storage.from('request-attachments').getPublicUrl(path)
+    fileUrl=urlData?.publicUrl
+    fileName=file.name
+    PENDING_FILE=null
+    const fi=q('msg-file');if(fi)fi.value=''
+  }
+  const msgBody=body||(fileName?'[File attached: '+fileName+']':'')
+  const extra=fileUrl?{attachment_url:fileUrl,attachment_name:fileName}:{}
+  const {error}=await SB.from('mkt_comments').insert([{request_id:id,author_name:USER.full_name,author_role:USER.role,body:msgBody,is_internal:internal,...extra}])
   if(error){toast('Error: '+error.message,'err');return}
   await loadDetail(id); switchTab('messages'); toast('Message sent')
 }
@@ -2041,7 +2419,8 @@ async function quickStatus(id,status){
   await changeStatus(id,status,'Admin status change'); renderView()
 }
 async function reopenReq(id){
-  if(!confirm('Reopen this request?'))return
+  showConfirmModal('Reopen Request','Move this request back to In Progress?','Reopen',()=>_doReopenReq(id));return}
+async function _doReopenReq(id){
   const r=getReq(id)
   await SB.from('marketing_requests').update({status:'active',completed_at:null}).eq('id',id)
   SB.from('mkt_status_history').insert([{request_id:id,changed_by_name:USER.full_name,changed_by_role:'admin',old_status:r?.status,new_status:'active',note:'Reopened'}])
@@ -2049,7 +2428,8 @@ async function reopenReq(id){
   toast('Reopened'); renderView()
 }
 async function archiveReq(id){
-  if(!confirm('Archive this request?'))return
+  showConfirmModal('Archive Request','This request will be hidden from the main queue. You can restore it any time.','Archive',()=>_doArchiveReq(id),'','btn-amber');return}
+async function _doArchiveReq(id){
   await SB.from('marketing_requests').update({is_archived:true}).eq('id',id)
   const r=getReq(id);if(r)r.is_archived=true
   toast('Archived'); if(VIEW==='detail')backFromDetail(); else renderView()
@@ -2061,15 +2441,21 @@ async function unarchiveReq(id){
 }
 async function deleteReq(id){
   const r=getReq(id)
-  if(!confirm('Permanently delete "'+( r?.program_name||'this request')+'"?\n\nThis cannot be undone.'))return
-  await SB.from('mkt_comments').delete().eq('request_id',id)
-  await SB.from('mkt_deliverables').delete().eq('request_id',id)
-  await SB.from('mkt_status_history').delete().eq('request_id',id)
-  await SB.from('mkt_notifications').delete().eq('request_id',id)
-  await SB.from('marketing_requests').delete().eq('id',id)
-  ALL_REQS=ALL_REQS.filter(x=>x.id!==id)
-  toast('Deleted permanently')
-  if(VIEW==='detail'){SEL_ID=null;navTo('requests')}else renderView()
+  showConfirmModal(
+    'Delete Request',
+    'Permanently delete "'+( r?.program_name||'this request')+'"? All messages, deliverables, and history will be lost. This cannot be undone.',
+    'Delete Permanently',
+    async()=>{
+      await SB.from('mkt_comments').delete().eq('request_id',id)
+      await SB.from('mkt_deliverables').delete().eq('request_id',id)
+      await SB.from('mkt_status_history').delete().eq('request_id',id)
+      await SB.from('mkt_notifications').delete().eq('request_id',id)
+      await SB.from('marketing_requests').delete().eq('id',id)
+      ALL_REQS=ALL_REQS.filter(x=>x.id!==id)
+      toast('Deleted permanently')
+      if(VIEW==='detail'){SEL_ID=null;navTo('requests')}else renderView()
+    }
+  )
 }
 function selToggle(id,checked){if(checked)SELECTED.add(id);else SELECTED.delete(id);renderView()}
 function selAll(checked,ids){SELECTED=checked?new Set(ids):new Set();renderView()}
@@ -2079,12 +2465,16 @@ async function bulkStatus(status){
   SELECTED=new Set(); renderView(); toast(ids.length+' requests updated')
 }
 async function bulkArchive(){
-  const ids=[...SELECTED];if(!ids.length||!confirm('Archive '+ids.length+' requests?'))return
+  const ids=[...SELECTED];if(!ids.length)return;showConfirmModal('Archive '+ids.length+' Requests','These requests will be hidden from the main queue. You can restore them any time.','Archive All',async()=>_doBulkArchive(ids));return}
+async function _doBulkArchive(ids){
+  SELECTED=new Set()
   for(const id of ids){await SB.from('marketing_requests').update({is_archived:true}).eq('id',id);const r=getReq(id);if(r)r.is_archived=true}
   SELECTED=new Set(); renderView(); toast(ids.length+' archived')
 }
 async function bulkDelete(){
-  const ids=[...SELECTED];if(!ids.length||!confirm('Permanently delete '+ids.length+' requests?'))return
+  const ids=[...SELECTED];if(!ids.length)return;showConfirmModal('Delete '+ids.length+' Requests','Permanently delete '+ids.length+' requests? All messages, deliverables, and history will be lost. This cannot be undone.','Delete All',async()=>_doBulkDelete(ids));return}
+async function _doBulkDelete(ids){
+  SELECTED=new Set()
   for(const id of ids){
     await SB.from('mkt_comments').delete().eq('request_id',id)
     await SB.from('mkt_deliverables').delete().eq('request_id',id)
@@ -2133,6 +2523,103 @@ document.addEventListener('keydown',function(e){
     else if(q('modal-user')?.classList.contains('open'))closeModal('modal-user')
   }
 })
+
+function renderHelp(){
+  const isStaff=USER?.role==='staff'
+  const isMktUser=USER?.role==='marketing'
+  return`
+  <div style="max-width:720px">
+    <div class="sec-hd"><div><div class="page-title">Help & Getting Started</div><div class="page-sub">Everything you need to know about the Marketing Hub</div></div></div>
+
+    ${isStaff?`
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-size:28px">📋</span>
+        <div><div style="font-size:16px;font-weight:700;letter-spacing:-.01em">How to Submit a Marketing Request</div><div style="font-size:12px;color:var(--text-2)">For Fitness Center staff</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${[
+          ['1','Click "+ New Request"','Use the button in the top navigation bar or on your Requests page.'],
+          ['2','Fill in Step 1 — The Basics','Enter your program name (required), dates, department, and select your primary marketing goal. Rate the urgency, revenue impact, and audience reach to help marketing prioritize your request.'],
+          ['3','Fill in Step 2 — Channels & Details','Select which marketing channels you need (print, digital, social, TV screens, etc.). Fill in the Critical Content field with exact dates, times, location, fees, and description — this is the most important field. The more complete it is, the fewer follow-up questions you\'ll get.'],
+          ['4','Save a Draft anytime','Click "💾 Save Draft" to save your progress and come back later. Your draft is saved securely and will be waiting when you return.'],
+          ['5','Submit','Click "✓ Submit Request." You will see a confirmation screen. Marketing will review your request within 1–2 business days.'],
+          ['6','Track your request','On the Requests page, you can see the status of all your submissions. Click any request to see messages, deliverables, and history.'],
+        ].map(([n,title,desc])=>`<div style="display:flex;gap:12px;padding:12px;background:var(--surface-2);border-radius:var(--radius-sm)">
+          <div style="width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${n}</div>
+          <div><div style="font-size:13px;font-weight:600;margin-bottom:3px">${title}</div><div style="font-size:12px;color:var(--text-2);line-height:1.5">${desc}</div></div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px">⚠️ What happens when marketing has a question?</div>
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-bottom:8px">You will see a yellow <strong>"Needs your info"</strong> badge on the request card. Click the request and you\'ll see a banner with their question at the top. Click <strong>"Reply →"</strong> to jump straight to the Messages tab, write your answer, and hit Send.</p>
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6">You can also edit your request while it\'s still in <strong>"Submitted"</strong> status — look for the ✏️ Edit button on the request detail page.</p>
+    </div>
+
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px">📊 Status meanings</div>
+      ${[['Submitted','badge-new','Marketing has received your request and it\'s in the queue'],['Being Reviewed','badge-reviewing','Marketing is actively reviewing and may have questions'],['In Progress','badge-active','Marketing is building your assets — check back for deliverables'],['Complete','badge-done','Your campaign is done. Please leave feedback to help us improve!']].map(([s,cls,desc])=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span class="badge ${cls}">${s}</span><span style="font-size:13px;color:var(--text-2)">${desc}</span></div>`).join('')}
+    </div>`:''}
+
+    ${isMktUser?`
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-size:28px">🎯</span>
+        <div><div style="font-size:16px;font-weight:700">Marketing Team Guide</div><div style="font-size:12px;color:var(--text-2)">Managing requests efficiently</div></div>
+      </div>
+      ${[
+        ['Queue view','Use the Queue tab (kanban board) as your daily working view. Requests are sorted by priority score — highest at the top of each column. The colored stripe on each card shows urgency at a glance.'],
+        ['Clarification flag','On any request\'s Brief tab, check "Flag — needs staff info" and write your question. The staff member will see a banner and a Reply button immediately.'],
+        ['Internal notes','In Messages, check "Internal note" to write notes visible only to the marketing team. Staff won\'t see these.'],
+        ['Deliverables','Add deliverables on the Deliverables tab with due dates. Check them off as you complete them. Staff can see progress.'],
+        ['Workload','Use the Workload tab to see how requests are distributed across the team. Assign requests to team members from the Brief tab.'],
+        ['CSV Export','Use the ⬇ Export CSV button on Performance or All Requests to export data for quarterly meetings.'],
+      ].map(([title,desc])=>`<div style="padding:10px 12px;background:var(--surface-2);border-radius:var(--radius-sm);margin-bottom:8px"><div style="font-size:13px;font-weight:600;margin-bottom:3px">${title}</div><div style="font-size:12px;color:var(--text-2);line-height:1.5">${desc}</div></div>`).join('')}
+    </div>`:''}
+
+    <div class="card" style="margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px">💡 Tips & best practices</div>
+      ${[
+        ['📅','Submit at least 3 weeks in advance','Standard lead time is 21 days. Rush requests may have limited channel options.'],
+        ['✍️','Complete the Critical Content field','The more complete your content, the faster marketing can work — and the fewer follow-up questions you\'ll get.'],
+        ['📎','Attach files via Messages','After submitting, use the Messages tab to attach photos, logos, or reference documents.'],
+        ['⭐','Leave feedback when requests are completed','Your rating helps the team improve and tracks what\'s working.'],
+        ['💾','Save drafts often','If you\'re filling out a long request, save a draft so you don\'t lose your work.'],
+      ].map(([icon,title,desc])=>`<div style="display:flex;gap:12px;margin-bottom:10px"><span style="font-size:20px;flex-shrink:0">${icon}</span><div><div style="font-size:13px;font-weight:600;margin-bottom:2px">${title}</div><div style="font-size:12px;color:var(--text-2);line-height:1.5">${desc}</div></div></div>`).join('')}
+    </div>
+
+    <div class="card">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px">📞 Need help?</div>
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6">For access issues, contact your admin. For questions about a specific request, use the Messages tab on that request to communicate directly with marketing.</p>
+      <p style="font-size:13px;color:var(--text-2);line-height:1.6;margin-top:8px">For technical issues with the app, contact <strong>joe@bgparks.org</strong>.</p>
+    </div>
+  </div>`
+}
+
+// ── CONFIRM MODAL SYSTEM ────────────────────────────────────────────
+let _confirmCbs = {}
+function showConfirmModal(title, msg, confirmLabel, onConfirm, onCancel, confirmCls){
+  confirmCls = confirmCls||'btn-red'
+  let m=q('confirm-modal')
+  if(!m){m=document.createElement('div');m.id='confirm-modal';m.className='modal-bg';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');document.body.appendChild(m)}
+  _confirmCbs={ok:onConfirm,cancel:onCancel}
+  m.innerHTML=`<div class="modal" style="max-width:420px">
+    <div class="modal-hd"><div class="modal-title">${esc(title)}</div><button class="modal-x" onclick="closeConfirmModal(false)" aria-label="Close">×</button></div>
+    <div class="modal-bd"><p style="font-size:14px;color:var(--text-2);line-height:1.6">${esc(msg)}</p></div>
+    <div class="modal-ft"><button class="btn btn-ghost" onclick="closeConfirmModal(false)">Cancel</button><button class="btn ${confirmCls}" onclick="closeConfirmModal(true)">${esc(confirmLabel)}</button></div>
+  </div>`
+  m.classList.add('open')
+  setTimeout(()=>m.querySelector('.modal-ft .btn:last-child')?.focus(),50)
+  m.onclick=e=>{if(e.target===m)closeConfirmModal(false)}
+}
+function closeConfirmModal(ok){
+  const m=q('confirm-modal');if(m)m.classList.remove('open')
+  if(ok&&_confirmCbs.ok)_confirmCbs.ok()
+  else if(!ok&&_confirmCbs.cancel)_confirmCbs.cancel()
+  _confirmCbs={}
+}
 
 // ── BOOT ──────────────────────────────────────────────────────────
 boot()
